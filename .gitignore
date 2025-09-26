@@ -22,8 +22,8 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
-/app/Models/
-/app/Services/
-/app/TeamRoles/
-/app/Trait/
-/config/spark.php
+app/Models/
+app/Services/
+app/TeamRoles/
+app/Trait/
+config/spark.php
