@@ -214,7 +214,6 @@
 
     function buildAddToCartPayload(eventData, currency) {
         const ecommerce = eventData?.ecommerce || {};
-        const purchase = ecommerce.purchase || {};
         const product = e.ecommerce.add.products[0];
 
         return {
