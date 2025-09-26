@@ -38,6 +38,7 @@
     const CURRENCY_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
     const PROCESS_DELAY_MS = 2000;
     const DEDUP_KEYS = ['client_dedup_id', 'position'];
+    const DEFAULT_CONTENT_TYPE = 'product';
 
     function setCurrencyCookie(value) {
         if (!value || typeof document === 'undefined') {
@@ -86,13 +87,17 @@
         return payloadCurrency;
     }
 
-    function ensurePayloadCurrency(payload, currency) {
+    function ensurePayloadDefaults(payload, currency) {
         if (!payload || typeof payload !== 'object') {
             return;
         }
 
         if (currency != null && !('currency' in payload)) {
             payload.currency = currency;
+        }
+
+        if (!('content_type' in payload)) {
+            payload.content_type = DEFAULT_CONTENT_TYPE;
         }
     }
 
@@ -304,7 +309,7 @@
         }
 
         const updatedCurrency = applyCurrencyFromPayload(payload, currency);
-        ensurePayloadCurrency(payload, updatedCurrency);
+        ensurePayloadDefaults(payload, updatedCurrency);
         trackEvent(eventData.event, payload, user);
 
         return updatedCurrency;
