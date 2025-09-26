@@ -219,7 +219,7 @@
 
     function buildAddToCartPayload(eventData, currency) {
         const ecommerce = eventData?.ecommerce || {};
-        const product = e.ecommerce.add.products[0];
+        const product = ecommerce.add.products[0];
 
         return {
             currency: currency,
