@@ -44,9 +44,12 @@
             }
         }, processEvent = function (e) {
             let u = getUserProperties();
+            let currency = null;
 
             if ('ecommerce' in e) {
-                console.log(e.ecommerce)
+                if ('currencyCode' in e.ecommerce) {
+                    currency = e.ecommerce.currencyCode;
+                }
             }
 
             if (e.event && events.includes(e.event)) {
@@ -74,6 +77,10 @@
                 }
                 if ('client_dedup_id' in payload || 'position' in payload) {
                     return;
+                }
+
+                if (!('currency' in payload) && currency !== null) {
+                    payload.currency = currency;
                 }
 
                 if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === "function") {
