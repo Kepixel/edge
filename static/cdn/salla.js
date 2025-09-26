@@ -45,6 +45,10 @@
         }, processEvent = function (e) {
             let u = getUserProperties();
 
+            if ('ecommerce' in e) {
+                console.log(e.ecommerce)
+            }
+
             if (e.event && events.includes(e.event)) {
                 var payload;
                 if (e[0] !== undefined) {
