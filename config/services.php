@@ -18,14 +18,14 @@ return [
         'token' => env('POSTMARK_TOKEN'),
     ],
 
-    'resend' => [
-        'key' => env('RESEND_KEY'),
-    ],
-
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+    ],
+
+    'resend' => [
+        'key' => env('RESEND_KEY'),
     ],
 
     'slack' => [
@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'terminal' => [
+        'api_key' => env('TERMINAL_API_KEY'),
+        'base_url' => env('TERMINAL_BASE_URL'),
+    ],
+
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'alert_chat_id' => env('TELEGRAM_ALERT_CHAT_ID'),
+        'health_check_chat_id' => env('TELEGRAM_HEALTH_CHECK_CHAT_ID'),
+    ],
 ];
