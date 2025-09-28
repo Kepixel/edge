@@ -70,12 +70,14 @@ class ProcessRudderRequest implements ShouldQueue
     {
         $source = Source::where('app_token', $this->sourceKey)->with('team')->first();
         if (! $source) {
+            Log::warning('Source not found for token: '.$this->sourceKey);
             return;
         }
 
         $team = $source->team;
 
         if (! $team) {
+            Log::warning('Team not found for source: '.$source->id);
             return;
         }
 
