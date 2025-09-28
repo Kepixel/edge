@@ -270,7 +270,7 @@ class ProcessRudderRequest implements ShouldQueue
      */
     private function getPortFromEnvFile($team): ?int
     {
-        $base = env('TEAMS_PATH');
+        $base = config('services.teams.base_path');
         if (! $base) {
             Log::emergency('TEAMS_PATH environment variable not set');
             return null;
