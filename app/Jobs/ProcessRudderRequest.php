@@ -70,14 +70,14 @@ class ProcessRudderRequest implements ShouldQueue
     {
         $source = Source::where('app_token', $this->sourceKey)->with('team')->first();
         if (! $source) {
-            Log::warning('Source not found for token: '.$this->sourceKey);
+            Log::emergency('Source not found for token: '.$this->sourceKey);
             return;
         }
 
         $team = $source->team;
 
         if (! $team) {
-            Log::warning('Team not found for source: '.$source->id);
+            Log::emergency('Team not found for source: '.$source->id);
             return;
         }
 
@@ -85,7 +85,7 @@ class ProcessRudderRequest implements ShouldQueue
 //        $currentMonth = now()->startOfMonth();
 //
 //        if ($usageService->limitReachedRecently($team, $currentMonth)) {
-//            Log::warning('Team already exceeded monthly events quota (cached); dropping Rudder request.', [
+//            Log::emergency('Team already exceeded monthly events quota (cached); dropping Rudder request.', [
 //                'team_id' => $team->id,
 //                'source_id' => $source->id,
 //                'path' => $this->path,
@@ -100,7 +100,7 @@ class ProcessRudderRequest implements ShouldQueue
 //        if ($usage !== null && $usageService->hasReachedLimit($usage)) {
 //            $usageService->storeTriggeredThreshold($team, $usage['month'], 100);
 //
-//            Log::warning('Team reached the monthly events quota; dropping Rudder request.', [
+//            Log::emergency('Team reached the monthly events quota; dropping Rudder request.', [
 //                'team_id' => $team->id,
 //                'source_id' => $source->id,
 //                'used_events' => $usage['used_events'],
@@ -115,11 +115,11 @@ class ProcessRudderRequest implements ShouldQueue
         // Enhanced port validation: check port in database, env file, and container status
         $validationResult = $this->validateTeamConfiguration($team, $source->id);
         if ($validationResult['should_return']) {
-            Log::warning('Returning from Rudder request due to team configuration issues.');
+            Log::emergency('Returning from Rudder request due to team configuration issues.');
             return;
         }
         if ($validationResult['should_retry']) {
-            Log::warning('Retrying Rudder request due to team configuration issues.');
+            Log::emergency('Retrying Rudder request due to team configuration issues.');
             throw new \RuntimeException($validationResult['message']);
         }
 
@@ -215,7 +215,7 @@ class ProcessRudderRequest implements ShouldQueue
 
         // Check if team has port in database
         if (! $teamPort) {
-            Log::warning('Team port not found in database for source: '.$sourceId, [
+            Log::emergency('Team port not found in database for source: '.$sourceId, [
                 'team_id' => $team->id,
                 'source_id' => $sourceId,
             ]);
@@ -225,7 +225,7 @@ class ProcessRudderRequest implements ShouldQueue
 
         // Check if team has port in env file
         if (! $envPort) {
-            Log::warning('Team port not found in env file for source: '.$sourceId, [
+            Log::emergency('Team port not found in env file for source: '.$sourceId, [
                 'team_id' => $team->id,
                 'source_id' => $sourceId,
                 'db_port' => $teamPort,
@@ -251,7 +251,7 @@ class ProcessRudderRequest implements ShouldQueue
         // Check if team docker containers are running
         if (! $containersRunning) {
             $message = "Team docker containers not running for source: {$sourceId}";
-            Log::warning($message, [
+            Log::emergency($message, [
                 'team_id' => $team->id,
                 'source_id' => $sourceId,
                 'port' => $portToUse,
@@ -272,14 +272,14 @@ class ProcessRudderRequest implements ShouldQueue
     {
         $base = env('TEAMS_PATH');
         if (! $base) {
-            Log::warning('TEAMS_PATH environment variable not set');
+            Log::emergency('TEAMS_PATH environment variable not set');
             return null;
         }
         $base = "$base/{$team->id}";
         $envFile = "{$base}/.env";
 
         if (! file_exists($envFile)) {
-            Log::warning("Env file not found for team: {$team->id} base: $base");
+            Log::emergency("Env file not found for team: {$team->id} base: $base");
             return null;
         }
 
