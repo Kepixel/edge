@@ -115,11 +115,9 @@ class ProcessRudderRequest implements ShouldQueue
         // Enhanced port validation: check port in database, env file, and container status
         $validationResult = $this->validateTeamConfiguration($team, $source->id);
         if ($validationResult['should_return']) {
-            Log::emergency('Returning from Rudder request due to team configuration issues.');
             return;
         }
         if ($validationResult['should_retry']) {
-            Log::emergency('Retrying Rudder request due to team configuration issues.');
             throw new \RuntimeException($validationResult['message']);
         }
 
