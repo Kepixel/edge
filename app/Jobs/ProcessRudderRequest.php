@@ -279,6 +279,7 @@ class ProcessRudderRequest implements ShouldQueue
         $envFile = "{$base}/.env";
 
         if (! file_exists($envFile)) {
+            Log::warning("Env file not found for team: {$team->id} base: $base");
             return null;
         }
 
