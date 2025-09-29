@@ -158,11 +158,6 @@ class ProcessRudderRequest implements ShouldQueue
 
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
             $response = $this->executeCurlInDockerBackend($team->id, $url, $headers, $this->data);
-
-            Log::emergency('response:', [
-                '_rs'   =>  $response
-            ]);
-
             if ($response['success']) {
                 // Request succeeded
                 break;
