@@ -114,13 +114,13 @@ class ProcessRudderRequest implements ShouldQueue
 //        }
 
         // Enhanced port validation: check port in database, env file, and container status
-        $validationResult = $this->validateTeamConfiguration($team, $source->id);
-        if ($validationResult['should_return']) {
-            return;
-        }
-        if ($validationResult['should_retry']) {
-            throw new \RuntimeException($validationResult['message']);
-        }
+//        $validationResult = $this->validateTeamConfiguration($team, $source->id);
+//        if ($validationResult['should_return']) {
+//            return;
+//        }
+//        if ($validationResult['should_retry']) {
+//            throw new \RuntimeException($validationResult['message']);
+//        }
 
         $paths = [
             'v1/i' => 'v1/identify',
@@ -149,7 +149,7 @@ class ProcessRudderRequest implements ShouldQueue
             $this->injectUserTraits();
         }
 
-        $port = $validationResult['port'];
+        $port = 8080;
         $url = "http://localhost:$port/$path";
         $headers = $this->headers;
         $headers['authorization'] = 'Basic '.base64_encode($source->write_key.':');
