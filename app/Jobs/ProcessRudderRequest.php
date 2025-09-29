@@ -768,6 +768,8 @@ class ProcessRudderRequest implements ShouldQueue
             Log::emergency('Failed to check Docker container status.', [
                 'team_id' => $teamId,
                 'error' => $throwable->getMessage(),
+                'isSuccessful' =>  $checkProcess->isSuccessful(),
+                'output' => $checkProcess->getOutput(),
             ]);
 
             return [
