@@ -713,20 +713,25 @@ class ProcessRudderRequest implements ShouldQueue
             $curlHeaders[] = sprintf('%s: %s', $key, $value);
         }
 
-        // Prepare the curl command
-        $headersString = '';
+        // Prepare the curl command parts
+        $headerArgs = [];
         foreach ($curlHeaders as $header) {
-            $headersString .= sprintf(' -H %s', escapeshellarg($header));
+            $headerArgs[] = '-H';
+            $headerArgs[] = $header;
         }
 
         $jsonData = json_encode($data);
 
-        $curlCommand = sprintf(
-            'curl -X POST %s %s -d %s --connect-timeout 30 --max-time 30 -w "%%{http_code}|%%{time_total}" -s',
-            $headersString,
-            escapeshellarg($url),
-            escapeshellarg($jsonData)
+        // Build command arguments array to avoid shell escaping issues
+        $curlArgs = array_merge(
+            ['curl', '-X', 'POST'],
+            $headerArgs,
+            ['-d', $jsonData, '--connect-timeout', '30', '--max-time', '30', '-w', '%{http_code}|%{time_total}', '-s', $url]
         );
+
+        // Convert arguments to properly escaped command string
+        $escapedArgs = array_map('escapeshellarg', $curlArgs);
+        $curlCommand = implode(' ', $escapedArgs);
 
         // Execute curl inside the Docker backend service
         $dockerCommand = sprintf(
