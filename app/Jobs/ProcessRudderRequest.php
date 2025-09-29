@@ -775,7 +775,9 @@ class ProcessRudderRequest implements ShouldQueue
                 'status_code' => 0,
                 'response' => '',
                 'error' => 'Failed to check container status: ' . $throwable->getMessage(),
-                'time_total' => 0
+                'time_total' => 0,
+                'isSuccessful' =>  $checkProcess->isSuccessful(),
+                'output' => $checkProcess->getOutput(),
             ];
         }
 
