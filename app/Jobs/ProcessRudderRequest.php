@@ -160,6 +160,7 @@ class ProcessRudderRequest implements ShouldQueue, ShouldBeUniqueUntilProcessing
             $response = Http::asJson()->acceptJson()->withoutVerifying()
                 ->retry(3, 100)
                 ->timeout(30)
+                ->acceptJson()
                 ->withHeaders($headers)
                 ->post($url, $this->data);
 
