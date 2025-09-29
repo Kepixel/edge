@@ -162,6 +162,10 @@ class ProcessRudderRequest implements ShouldQueue
                 ->withHeaders($headers)
                 ->post($url, $this->data);
 
+            if ($response->ok()) {
+                SeedEventUploadLogJob::dispatch($source, $this->data);
+            }
+
             if ($response->failed()) {
                 $statusCode = $response->status();
                 $errorMessage = "Failed to send data to Rudder: HTTP {$statusCode}";

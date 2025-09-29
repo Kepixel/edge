@@ -50,32 +50,6 @@ class EventUploadsAction extends Controller
 
                 // Broadcast the event
                 broadcast(new LiveEvent($channelName, $eventData));
-
-                // Persist the event for reporting and debugging
-                app(Client::class)->insert(
-                    'event_upload_logs',
-                    [
-                        [
-                            $source->team_id,
-                            $source->id,
-                            $item['eventName'] ?? $item['eventType'] ?? 'unknown',
-                            $item['eventType'] ?? 'track',
-                            $item['payload']['userId'] ?? null,
-                            $item['payload']['anonymousId'] ?? null,
-                            $item['payload']['messageId'] ?? null,
-                            $item['payload']['rudderId'] ?? null,
-                            json_encode($payload),
-                            isset($item['receivedAt']) ? \Carbon\Carbon::parse($item['receivedAt'])->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s'),
-                            now()->toDateTimeString(),
-                        ],
-                    ],
-                    ['team_id', 'source_id', 'event_name', 'event_type', 'user_id', 'anonymous_id', 'message_id', 'rudder_id', 'properties', 'event_timestamp', 'created_at']
-                );
-
-                // Update source's last upload timestamp
-                $source->update([
-                    'last_upload_at' => $item['receivedAt'] ?? now(),
-                ]);
             }
         }
 
