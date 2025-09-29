@@ -62,6 +62,7 @@ class ProcessRudderRequest implements ShouldQueue
         $this->headers = $headers;
         $this->path = $path;
         $this->onQueue('high');
+        $this->onConnection('database');
     }
 
     /**
