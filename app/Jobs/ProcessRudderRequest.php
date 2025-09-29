@@ -742,6 +742,10 @@ class ProcessRudderRequest implements ShouldQueue
 
         // First check if the Docker container exists and is running
         $checkCommand = sprintf('docker ps -q -f name=%s_backend_1', escapeshellarg($teamId));
+        Log::emergency('checkCommand', [
+            '$checkCommand' => $checkCommand,
+            '$dockerCommand' => $dockerCommand,
+        ]);
         $checkProcess = Process::fromShellCommandline($checkCommand);
         $checkProcess->setTimeout(10);
 
