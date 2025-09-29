@@ -148,9 +148,6 @@ class ProcessRudderRequest implements ShouldQueue
         $headers = $this->headers;
         $headers['authorization'] = 'Basic '.base64_encode($source->write_key.':');
 
-        // Add a Content-Type header for JSON
-//        $headers['Accept'] = 'application/json';
-
         // Retry logic with exponential backoff
         $maxRetries = 3;
         $retryDelay = 100; // milliseconds
