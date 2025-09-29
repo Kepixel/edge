@@ -159,6 +159,10 @@ class ProcessRudderRequest implements ShouldQueue
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
             $response = $this->executeCurlInDockerBackend($team->id, $url, $headers, $this->data);
 
+            Log::emergency('response:', [
+                '_rs'   =>  $response
+            ]);
+
             if ($response['success']) {
                 // Request succeeded
                 break;
@@ -167,7 +171,7 @@ class ProcessRudderRequest implements ShouldQueue
             $statusCode = $response['status_code'];
             $errorMessage = "Failed to send data to Rudder: HTTP {$statusCode}";
 
-            Log::error($errorMessage, [
+            Log::emergency($errorMessage, [
                 'source_key' => $this->sourceKey,
                 'status' => $statusCode,
                 'response' => $response['response'],
@@ -225,7 +229,7 @@ class ProcessRudderRequest implements ShouldQueue
 
         // If ports are inconsistent, update team with env port and continue with env port
         if ($teamPort !== $envPort) {
-            Log::info('Updating team port from database to match env file for source: '.$sourceId, [
+            Log::emergency('Updating team port from database to match env file for source: '.$sourceId, [
                 'team_id' => $team->id,
                 'source_id' => $sourceId,
                 'old_db_port' => $teamPort,
@@ -303,7 +307,7 @@ class ProcessRudderRequest implements ShouldQueue
         if (! $this->updateTeamPortConfiguration($team, $newPort)) {
             $message = 'Failed to persist replacement port for team after sync failure.';
 
-            Log::error($message, [
+            Log::emergency($message, [
                 'team_id' => $team->id,
                 'source_id' => $sourceId,
                 'replacement_port' => $newPort,
@@ -323,7 +327,7 @@ class ProcessRudderRequest implements ShouldQueue
         if (! $this->restartTeamDockerContainers($team->id)) {
             $message = 'Failed to restart docker containers after assigning replacement port.';
 
-            Log::error($message, [
+            Log::emergency($message, [
                 'team_id' => $team->id,
                 'source_id' => $sourceId,
                 'replacement_port' => $newPort,
@@ -340,7 +344,7 @@ class ProcessRudderRequest implements ShouldQueue
             ];
         }
 
-        Log::info('Successfully reassigned team port after sync failure.', [
+        Log::emergency('Successfully reassigned team port after sync failure.', [
             'team_id' => $team->id,
             'source_id' => $sourceId,
             'new_port' => $newPort,
@@ -365,7 +369,7 @@ class ProcessRudderRequest implements ShouldQueue
         try {
             $team->update(['port' => $newPort]);
         } catch (\Exception $e) {
-            Log::error('Failed to update team port in database during fallback.', [
+            Log::emergency('Failed to update team port in database during fallback.', [
                 'team_id' => $team->id,
                 'replacement_port' => $newPort,
                 'error' => $e->getMessage(),
@@ -384,7 +388,7 @@ class ProcessRudderRequest implements ShouldQueue
             $envContent = file_get_contents($envFile);
 
             if ($envContent === false) {
-                Log::error('Unable to read team env file for port update.', [
+                Log::emergency('Unable to read team env file for port update.', [
                     'team_id' => $team->id,
                     'path' => $envFile,
                 ]);
@@ -400,7 +404,7 @@ class ProcessRudderRequest implements ShouldQueue
             }
 
             if (file_put_contents($envFile, $updatedEnv) === false) {
-                Log::error('Unable to write updated port to team env file.', [
+                Log::emergency('Unable to write updated port to team env file.', [
                     'team_id' => $team->id,
                     'path' => $envFile,
                 ]);
@@ -416,7 +420,7 @@ class ProcessRudderRequest implements ShouldQueue
             ];
 
             if (file_put_contents($envFile, implode(PHP_EOL, $env).PHP_EOL) === false) {
-                Log::error('Unable to create team env file during port update.', [
+                Log::emergency('Unable to create team env file during port update.', [
                     'team_id' => $team->id,
                     'path' => $envFile,
                 ]);
@@ -455,7 +459,7 @@ class ProcessRudderRequest implements ShouldQueue
         try {
             $process->run();
         } catch (\Throwable $throwable) {
-            Log::error('Docker restart command failed to execute.', [
+            Log::emergency('Docker restart command failed to execute.', [
                 'team_id' => $teamId,
                 'directory' => $teamDirectory,
                 'error' => $throwable->getMessage(),
@@ -465,7 +469,7 @@ class ProcessRudderRequest implements ShouldQueue
         }
 
         if (! $process->isSuccessful()) {
-            Log::error('Docker restart command exited with failure.', [
+            Log::emergency('Docker restart command exited with failure.', [
                 'team_id' => $teamId,
                 'directory' => $teamDirectory,
                 'exit_code' => $process->getExitCode(),
@@ -476,7 +480,7 @@ class ProcessRudderRequest implements ShouldQueue
             return false;
         }
 
-        Log::info('Docker containers restarted to apply new team port.', [
+        Log::emergency('Docker containers restarted to apply new team port.', [
             'team_id' => $teamId,
             'directory' => $teamDirectory,
         ]);
@@ -512,7 +516,7 @@ class ProcessRudderRequest implements ShouldQueue
             return true;
         }
 
-        Log::error('Unable to create team directory for port update.', [
+        Log::emergency('Unable to create team directory for port update.', [
             'directory' => $directory,
         ]);
 
@@ -744,7 +748,7 @@ class ProcessRudderRequest implements ShouldQueue
         try {
             $checkProcess->run();
             if (!$checkProcess->isSuccessful() || trim($checkProcess->getOutput()) === '') {
-                Log::error('Docker container not found or not running.', [
+                Log::emergency('Docker container not found or not running.', [
                     'team_id' => $teamId,
                     'container_name' => $teamId . '_backend_1',
                 ]);
@@ -758,7 +762,7 @@ class ProcessRudderRequest implements ShouldQueue
                 ];
             }
         } catch (\Throwable $throwable) {
-            Log::error('Failed to check Docker container status.', [
+            Log::emergency('Failed to check Docker container status.', [
                 'team_id' => $teamId,
                 'error' => $throwable->getMessage(),
             ]);
@@ -778,7 +782,7 @@ class ProcessRudderRequest implements ShouldQueue
         try {
             $process->run();
         } catch (\Throwable $throwable) {
-            Log::error('Docker curl command failed to execute.', [
+            Log::emergency('Docker curl command failed to execute.', [
                 'team_id' => $teamId,
                 'url' => $url,
                 'error' => $throwable->getMessage(),
@@ -794,7 +798,7 @@ class ProcessRudderRequest implements ShouldQueue
         }
 
         if (!$process->isSuccessful()) {
-            Log::error('Docker curl command exited with failure.', [
+            Log::emergency('Docker curl command exited with failure.', [
                 'team_id' => $teamId,
                 'url' => $url,
                 'exit_code' => $process->getExitCode(),
