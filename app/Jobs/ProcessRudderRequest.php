@@ -146,10 +146,11 @@ class ProcessRudderRequest implements ShouldQueue
 
         $url = "http://localhost:8080/$path";
         $headers = $this->headers;
+        $headers['Content-Type'] = 'application/json';
+        $headers['Accept'] = $headers['Accept'] ?? 'application/json';
         $headers['authorization'] = 'Basic '.base64_encode($source->write_key.':');
 
         // Add a Content-Type header for JSON
-//        $headers['Content-Type'] = 'application/json';
 //        $headers['Accept'] = 'application/json';
 
         // Retry logic with exponential backoff
@@ -713,141 +714,138 @@ class ProcessRudderRequest implements ShouldQueue
             $curlHeaders[] = sprintf('%s: %s', $key, $value);
         }
 
+        // Prepare the curl command parts
+        $headerArgs = [];
+        foreach ($curlHeaders as $header) {
+            $headerArgs[] = '-H';
+            $headerArgs[] = $header;
+        }
+
         $jsonData = json_encode($data);
 
-        // Create a temporary file to store the JSON data to avoid shell escaping issues
-        $tempFile = tempnam(sys_get_temp_dir(), 'curl_data_');
-        file_put_contents($tempFile, $jsonData);
+        // Build command arguments array to avoid shell escaping issues
+        $curlArgs = array_merge(
+            ['curl', '-X', 'POST'],
+            $headerArgs,
+            ['--data-binary', $jsonData, '--connect-timeout', '30', '--max-time', '30', '-w', '%{http_code}|%{time_total}', '-s', $url]
+        );
+
+        // Convert arguments to properly escaped command string
+        $escapedArgs = array_map('escapeshellarg', $curlArgs);
+        $curlCommand = implode(' ', $escapedArgs);
+
+        // Execute curl inside the Docker backend service
+        $dockerCommand = sprintf(
+            'docker exec %s-backend-1 sh -c %s',
+            escapeshellarg($teamId),
+            escapeshellarg($curlCommand)
+        );
+
+        // First check if the Docker container exists and is running
+        $checkCommand = sprintf('docker ps -q -f name=%s-backend-1', escapeshellarg($teamId));
+        Log::emergency('checkCommand', [
+            '$checkCommand' => $checkCommand,
+            '$dockerCommand' => $dockerCommand,
+        ]);
+        $checkProcess = Process::fromShellCommandline($checkCommand);
+        $checkProcess->setTimeout(10);
 
         try {
-            // First check if the Docker container exists and is running
-            $checkCommand = sprintf('docker ps -q -f name=%s-backend-1', escapeshellarg($teamId));
-            $checkProcess = Process::fromShellCommandline($checkCommand);
-            $checkProcess->setTimeout(10);
-
-            try {
-                $checkProcess->run();
-                if (!$checkProcess->isSuccessful() || trim($checkProcess->getOutput()) === '') {
-                    Log::emergency('Docker container not found or not running.', [
-                        'team_id' => $teamId,
-                    ]);
-
-                    return [
-                        'success' => false,
-                        'status_code' => 0,
-                        'response' => '',
-                        'error' => 'Docker container not available',
-                        'time_total' => 0
-                    ];
-                }
-            } catch (\Throwable $throwable) {
-                Log::emergency('Failed to check Docker container status.', [
+            $checkProcess->run();
+            if (!$checkProcess->isSuccessful() || trim($checkProcess->getOutput()) === '') {
+                Log::emergency('Docker container not found or not running.', [
                     'team_id' => $teamId,
-                    'error' => $throwable->getMessage(),
                 ]);
 
                 return [
                     'success' => false,
                     'status_code' => 0,
                     'response' => '',
-                    'error' => 'Failed to check container status: ' . $throwable->getMessage(),
+                    'error' => 'Docker container not available',
                     'time_total' => 0
                 ];
             }
-
-            // Build the docker exec command with file input instead of inline JSON
-            $dockerArgs = [
-                'docker', 'exec', '-i', $teamId . '-backend-1', 'sh', '-c',
-                sprintf(
-                    'curl -X POST %s --data-binary @- --connect-timeout 30 --max-time 30 -w "%%{http_code}|%%{time_total}" -s %s',
-                    implode(' ', array_map(function($header) {
-                        return '-H ' . escapeshellarg($header);
-                    }, $curlHeaders)),
-                    escapeshellarg($url)
-                )
-            ];
-
-            // Execute the command with JSON data piped from the temp file
-            $dockerCommand = sprintf(
-                '%s < %s',
-                implode(' ', array_map('escapeshellarg', $dockerArgs)),
-                escapeshellarg($tempFile)
-            );
-
-            Log::emergency('Executing docker command', [
+        } catch (\Throwable $throwable) {
+            Log::emergency('Failed to check Docker container status.', [
                 'team_id' => $teamId,
-                'command' => $dockerCommand,
+                'error' => $throwable->getMessage(),
+                'isSuccessful' =>  $checkProcess->isSuccessful(),
+                'output' => $checkProcess->getOutput(),
             ]);
 
-            $process = Process::fromShellCommandline($dockerCommand);
-            $process->setTimeout(60);
+            return [
+                'success' => false,
+                'status_code' => 0,
+                'response' => '',
+                'error' => 'Failed to check container status: ' . $throwable->getMessage(),
+                'time_total' => 0,
+                'isSuccessful' =>  $checkProcess->isSuccessful(),
+                'output' => $checkProcess->getOutput(),
+            ];
+        }
 
-            try {
-                $process->run();
-            } catch (\Throwable $throwable) {
-                Log::emergency('Docker curl command failed to execute.', [
-                    'team_id' => $teamId,
-                    'url' => $url,
-                    'error' => $throwable->getMessage(),
-                ]);
+        $process = Process::fromShellCommandline($dockerCommand);
+        $process->setTimeout(60);
 
-                return [
-                    'success' => false,
-                    'status_code' => 0,
-                    'response' => '',
-                    'error' => $throwable->getMessage(),
-                    'time_total' => 0
-                ];
-            }
-
-            if (!$process->isSuccessful()) {
-                Log::emergency('Docker curl command exited with failure.', [
-                    'team_id' => $teamId,
-                    'url' => $url,
-                    'exit_code' => $process->getExitCode(),
-                    'stderr' => $process->getErrorOutput(),
-                    'stdout' => $process->getOutput(),
-                ]);
-
-                return [
-                    'success' => false,
-                    'status_code' => 0,
-                    'response' => $process->getErrorOutput(),
-                    'error' => 'Docker command failed',
-                    'time_total' => 0
-                ];
-            }
-
-            $output = trim($process->getOutput());
-
-            // Parse the output - curl returns response body followed by status code and time
-            $parts = explode('|', $output);
-            if (count($parts) >= 2) {
-                $statusAndTime = array_pop($parts);
-                $statusTimeParts = explode('|', $statusAndTime);
-                $statusCode = (int) ($statusTimeParts[0] ?? 0);
-                $timeTotal = (float) ($statusTimeParts[1] ?? 0);
-                $responseBody = implode('|', $parts);
-            } else {
-                // Fallback parsing
-                $statusCode = 0;
-                $timeTotal = 0;
-                $responseBody = $output;
-            }
+        try {
+            $process->run();
+        } catch (\Throwable $throwable) {
+            Log::emergency('Docker curl command failed to execute.', [
+                'team_id' => $teamId,
+                'url' => $url,
+                'error' => $throwable->getMessage(),
+            ]);
 
             return [
-                'success' => $statusCode >= 200 && $statusCode < 300,
-                'status_code' => $statusCode,
-                'response' => $responseBody,
-                'error' => null,
-                'time_total' => $timeTotal
+                'success' => false,
+                'status_code' => 0,
+                'response' => '',
+                'error' => $throwable->getMessage(),
+                'time_total' => 0
             ];
-
-        } finally {
-            // Clean up the temporary file
-            if (file_exists($tempFile)) {
-                unlink($tempFile);
-            }
         }
+
+        if (!$process->isSuccessful()) {
+            Log::emergency('Docker curl command exited with failure.', [
+                'team_id' => $teamId,
+                'url' => $url,
+                'exit_code' => $process->getExitCode(),
+                'stderr' => $process->getErrorOutput(),
+                'stdout' => $process->getOutput(),
+            ]);
+
+            return [
+                'success' => false,
+                'status_code' => 0,
+                'response' => $process->getErrorOutput(),
+                'error' => 'Docker command failed',
+                'time_total' => 0
+            ];
+        }
+
+        $output = trim($process->getOutput());
+
+        // Parse the output - curl returns response body followed by status code and time
+        $parts = explode('|', $output);
+        if (count($parts) >= 2) {
+            $statusAndTime = array_pop($parts);
+            $statusTimeParts = explode('|', $statusAndTime);
+            $statusCode = (int) ($statusTimeParts[0] ?? 0);
+            $timeTotal = (float) ($statusTimeParts[1] ?? 0);
+            $responseBody = implode('|', $parts);
+        } else {
+            // Fallback parsing
+            $statusCode = 0;
+            $timeTotal = 0;
+            $responseBody = $output;
+        }
+
+        return [
+            'success' => $statusCode >= 200 && $statusCode < 300,
+            'status_code' => $statusCode,
+            'response' => $responseBody,
+            'error' => null,
+            'time_total' => $timeTotal
+        ];
     }
 }
