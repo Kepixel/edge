@@ -35,13 +35,11 @@ Route::domain('config.kepixel.com')->group(function () {
     });
 
     Route::any('/data-plane/v1/namespaces/{token}/config', function ($token) {
-        $config = base_path('config.json');
+        $config = base_path('../config.json');
         return response()->file($config, [
             'Content-Type' => 'application/json'
         ]);
     });
-
-
 
     Route::get('/', ConfigIndexController::class);
 
