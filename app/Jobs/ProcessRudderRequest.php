@@ -735,13 +735,13 @@ class ProcessRudderRequest implements ShouldQueue
 
         // Execute curl inside the Docker backend service
         $dockerCommand = sprintf(
-            'docker exec %s_backend_1 sh -c %s',
+            'docker exec %s-backend-1 sh -c %s',
             escapeshellarg($teamId),
             escapeshellarg($curlCommand)
         );
 
         // First check if the Docker container exists and is running
-        $checkCommand = sprintf('docker ps -q -f name=%s_backend_1', escapeshellarg($teamId));
+        $checkCommand = sprintf('docker ps -q -f name=%s-backend-1', escapeshellarg($teamId));
         Log::emergency('checkCommand', [
             '$checkCommand' => $checkCommand,
             '$dockerCommand' => $dockerCommand,
@@ -754,7 +754,6 @@ class ProcessRudderRequest implements ShouldQueue
             if (!$checkProcess->isSuccessful() || trim($checkProcess->getOutput()) === '') {
                 Log::emergency('Docker container not found or not running.', [
                     'team_id' => $teamId,
-                    'container_name' => $teamId . '_backend_1',
                 ]);
 
                 return [
