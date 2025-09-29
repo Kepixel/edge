@@ -153,7 +153,7 @@ class ProcessRudderRequest implements ShouldQueue, ShouldBeUniqueUntilProcessing
         $port = 8080;
         $url = "http://localhost:$port/$path";
         $headers = $this->headers;
-        $headers['authorization'] = 'Basic '.base64_encode($source->write_key.':');
+        $headers['authorization'] = 'Basic '.base64_encode($source->write_key);
 
         try {
             $response = Http::asJson()->acceptJson()->withoutVerifying()
