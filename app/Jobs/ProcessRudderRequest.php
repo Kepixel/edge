@@ -5,7 +5,6 @@ namespace App\Jobs;
 use App\Models\Source;
 use App\Services\TeamEventUsageService;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUniqueUntilProcessing;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Http\Client\ConnectionException;
@@ -15,7 +14,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
-class ProcessRudderRequest implements ShouldQueue, ShouldBeUniqueUntilProcessing
+class ProcessRudderRequest implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -115,13 +114,13 @@ class ProcessRudderRequest implements ShouldQueue, ShouldBeUniqueUntilProcessing
 //        }
 
         // Enhanced port validation: check port in database, env file, and container status
-//        $validationResult = $this->validateTeamConfiguration($team, $source->id);
-//        if ($validationResult['should_return']) {
-//            return;
-//        }
-//        if ($validationResult['should_retry']) {
-//            throw new \RuntimeException($validationResult['message']);
-//        }
+        $validationResult = $this->validateTeamConfiguration($team, $source->id);
+        if ($validationResult['should_return']) {
+            return;
+        }
+        if ($validationResult['should_retry']) {
+            throw new \RuntimeException($validationResult['message']);
+        }
 
         $paths = [
             'v1/i' => 'v1/identify',
@@ -150,7 +149,7 @@ class ProcessRudderRequest implements ShouldQueue, ShouldBeUniqueUntilProcessing
             $this->injectUserTraits();
         }
 
-        $port = 8080;
+        $port = $validationResult['port'];
         $url = "http://localhost:$port/$path";
         $headers = $this->headers;
         $headers['authorization'] = 'Basic '.base64_encode($source->write_key.':');
