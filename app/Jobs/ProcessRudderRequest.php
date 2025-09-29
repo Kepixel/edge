@@ -146,8 +146,6 @@ class ProcessRudderRequest implements ShouldQueue
 
         $url = "http://localhost:8080/$path";
         $headers = $this->headers;
-        $headers['Content-Type'] = 'application/json';
-        $headers['Accept'] = $headers['Accept'] ?? 'application/json';
         $headers['authorization'] = 'Basic '.base64_encode($source->write_key.':');
 
         // Add a Content-Type header for JSON
