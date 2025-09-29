@@ -5,12 +5,11 @@ namespace App\Jobs;
 use Carbon\Carbon;
 use ClickHouseDB\Client;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Foundation\Queue\Queueable;
 
 class SeedEventUploadLogJob implements ShouldQueue
 {
-    use Dispatchable, Queueable;
+    use Queueable;
 
     /**
      * Create a new job instance.
