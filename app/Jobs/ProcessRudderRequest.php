@@ -7,10 +7,8 @@ use App\Services\TeamEventUsageService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\Process\Process;
 
@@ -114,15 +112,6 @@ class ProcessRudderRequest implements ShouldQueue
 //            return;
 //        }
 
-        // Enhanced port validation: check port in database, env file, and container status
-        $validationResult = $this->validateTeamConfiguration($team, $source->id);
-        if ($validationResult['should_return']) {
-            return;
-        }
-        if ($validationResult['should_retry']) {
-            throw new \RuntimeException($validationResult['message']);
-        }
-
         $paths = [
             'v1/i' => 'v1/identify',
             'v1/t' => 'v1/track',
@@ -150,56 +139,56 @@ class ProcessRudderRequest implements ShouldQueue
             $this->injectUserTraits();
         }
 
-        $port = $validationResult['port'];
-        $url = "http://localhost:$port/$path";
+        $teamsBase = config('services.teams.base_path');
+        if (! $teamsBase) {
+            throw new \RuntimeException('TEAMS_BASE_PATH environment variable not set');
+        }
+
+        $url = "http://localhost:8080/$path";
         $headers = $this->headers;
         $headers['authorization'] = 'Basic '.base64_encode($source->write_key.':');
 
-        try {
-            $response = Http::asJson()->acceptJson()->withoutVerifying()
-                ->retry(3, 100)
-                ->timeout(30)
-                ->withHeaders($headers)
-                ->post($url, $this->data);
+        // Add a Content-Type header for JSON
+//        $headers['Content-Type'] = 'application/json';
+//        $headers['Accept'] = 'application/json';
 
-            if ($response->failed()) {
-                $statusCode = $response->status();
-                $errorMessage = "Failed to send data to Rudder: HTTP {$statusCode}";
+        // Retry logic with exponential backoff
+        $maxRetries = 3;
+        $retryDelay = 100; // milliseconds
 
-                Log::error($errorMessage, [
-                    'source_key' => $this->sourceKey,
-                    'status' => $statusCode,
-                    'response' => $response->body(),
-                    'url' => $url,
-                    'attempt' => $this->attempts(),
-                ]);
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            $response = $this->executeCurlInDockerBackend($team->id, $url, $headers, $this->data);
 
-                // Determine if this is a retryable error
+            if ($response['success']) {
+                // Request succeeded
+                break;
+            }
+
+            $statusCode = $response['status_code'];
+            $errorMessage = "Failed to send data to Rudder: HTTP {$statusCode}";
+
+            Log::error($errorMessage, [
+                'source_key' => $this->sourceKey,
+                'status' => $statusCode,
+                'response' => $response['response'],
+                'url' => $url,
+                'attempt' => $this->attempts(),
+                'curl_attempt' => $attempt,
+                'error' => $response['error'],
+            ]);
+
+            // If this is the last attempt or non-retryable error, handle accordingly
+            if ($attempt === $maxRetries || !$this->isRetryableHttpError($statusCode)) {
                 if ($this->isRetryableHttpError($statusCode)) {
                     throw new \RuntimeException($errorMessage);
                 }
+                // Non-retryable error, don't retry the job
+                return;
             }
-        } catch (ConnectionException $e) {
-            // Network/connection issues are retryable
-            Log::error('Connection error processing Rudder request: '.$e->getMessage(), [
-                'source_key' => $this->sourceKey,
-                'url' => $url,
-                'attempt' => $this->attempts(),
-                'exception' => $e,
-            ]);
 
-            throw $e;
-        } catch (\Exception $e) {
-            // For other exceptions, log and don't retry unless it's clearly retryable
-            Log::error('Unexpected error processing Rudder request: '.$e->getMessage(), [
-                'source_key' => $this->sourceKey,
-                'url' => $url,
-                'attempt' => $this->attempts(),
-                'exception' => $e,
-            ]);
-
-            // Don't retry unexpected exceptions
-            return;
+            // Wait before retrying
+            usleep($retryDelay * 1000);
+            $retryDelay *= 2; // Exponential backoff
         }
     }
 
@@ -712,5 +701,139 @@ class ProcessRudderRequest implements ShouldQueue
         //
         //        }
 
+    }
+
+    /**
+     * Execute curl command inside Docker backend service
+     */
+    private function executeCurlInDockerBackend(string $teamId, string $url, array $headers, array $data): array
+    {
+        // Prepare headers for curl
+        $curlHeaders = [];
+        foreach ($headers as $key => $value) {
+            $curlHeaders[] = sprintf('%s: %s', $key, $value);
+        }
+
+        // Prepare the curl command
+        $headersString = '';
+        foreach ($curlHeaders as $header) {
+            $headersString .= sprintf(' -H %s', escapeshellarg($header));
+        }
+
+        $jsonData = json_encode($data);
+
+        $curlCommand = sprintf(
+            'curl -X POST %s %s -d %s --connect-timeout 30 --max-time 30 -w "%%{http_code}|%%{time_total}" -s',
+            $headersString,
+            escapeshellarg($url),
+            escapeshellarg($jsonData)
+        );
+
+        // Execute curl inside the Docker backend service
+        $dockerCommand = sprintf(
+            'docker exec %s_backend_1 sh -c %s',
+            escapeshellarg($teamId),
+            escapeshellarg($curlCommand)
+        );
+
+        // First check if the Docker container exists and is running
+        $checkCommand = sprintf('docker ps -q -f name=%s_backend_1', escapeshellarg($teamId));
+        $checkProcess = Process::fromShellCommandline($checkCommand);
+        $checkProcess->setTimeout(10);
+
+        try {
+            $checkProcess->run();
+            if (!$checkProcess->isSuccessful() || trim($checkProcess->getOutput()) === '') {
+                Log::error('Docker container not found or not running.', [
+                    'team_id' => $teamId,
+                    'container_name' => $teamId . '_backend_1',
+                ]);
+
+                return [
+                    'success' => false,
+                    'status_code' => 0,
+                    'response' => '',
+                    'error' => 'Docker container not available',
+                    'time_total' => 0
+                ];
+            }
+        } catch (\Throwable $throwable) {
+            Log::error('Failed to check Docker container status.', [
+                'team_id' => $teamId,
+                'error' => $throwable->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'status_code' => 0,
+                'response' => '',
+                'error' => 'Failed to check container status: ' . $throwable->getMessage(),
+                'time_total' => 0
+            ];
+        }
+
+        $process = Process::fromShellCommandline($dockerCommand);
+        $process->setTimeout(60);
+
+        try {
+            $process->run();
+        } catch (\Throwable $throwable) {
+            Log::error('Docker curl command failed to execute.', [
+                'team_id' => $teamId,
+                'url' => $url,
+                'error' => $throwable->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'status_code' => 0,
+                'response' => '',
+                'error' => $throwable->getMessage(),
+                'time_total' => 0
+            ];
+        }
+
+        if (!$process->isSuccessful()) {
+            Log::error('Docker curl command exited with failure.', [
+                'team_id' => $teamId,
+                'url' => $url,
+                'exit_code' => $process->getExitCode(),
+                'stderr' => $process->getErrorOutput(),
+                'stdout' => $process->getOutput(),
+            ]);
+
+            return [
+                'success' => false,
+                'status_code' => 0,
+                'response' => $process->getErrorOutput(),
+                'error' => 'Docker command failed',
+                'time_total' => 0
+            ];
+        }
+
+        $output = trim($process->getOutput());
+
+        // Parse the output - curl returns response body followed by status code and time
+        $parts = explode('|', $output);
+        if (count($parts) >= 2) {
+            $statusAndTime = array_pop($parts);
+            $statusTimeParts = explode('|', $statusAndTime);
+            $statusCode = (int) ($statusTimeParts[0] ?? 0);
+            $timeTotal = (float) ($statusTimeParts[1] ?? 0);
+            $responseBody = implode('|', $parts);
+        } else {
+            // Fallback parsing
+            $statusCode = 0;
+            $timeTotal = 0;
+            $responseBody = $output;
+        }
+
+        return [
+            'success' => $statusCode >= 200 && $statusCode < 300,
+            'status_code' => $statusCode,
+            'response' => $responseBody,
+            'error' => null,
+            'time_total' => $timeTotal
+        ];
     }
 }
