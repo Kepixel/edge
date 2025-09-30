@@ -25,9 +25,11 @@
                         }
 
                         if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === 'function') {
+                            window.kepixelAnalytics.alias(data.data.id);
                             window.kepixelAnalytics.identify(data.data.id, user);
                         } else {
                             window.kepixelAnalytics = window.kepixelAnalytics || [];
+                            window.kepixelAnalytics.push(["alias", data.data.id]);
                             window.kepixelAnalytics.push(["identify", data.data.id, user]);
                         }
                     }
