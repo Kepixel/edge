@@ -4,7 +4,19 @@
         getUserProperties = function () {
 
         }, processEvent = function (e) {
+            console.log(e)
+            if (e.event === 'gtm.load') {
+                if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === 'function') {
+                    window.kepixelAnalytics.page();
+                } else {
+                    window.kepixelAnalytics = window.kepixelAnalytics || [];
+                    window.kepixelAnalytics.push(["page"]);
+                }
+            }
             if (e.ecommerce == 'undefined') {
+                if (e.event === 'view_item') {
+
+                }
                 console.log(e)
             }
         };
