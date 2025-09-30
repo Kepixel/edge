@@ -103,6 +103,6 @@ return [
     |
     */
 
-    'prefix' => 'kepixel_cache_',
+    'prefix' => '',
 
 ];
