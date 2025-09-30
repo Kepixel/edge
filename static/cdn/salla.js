@@ -182,14 +182,8 @@
 
     function trackEvent(eventName, payload, user) {
         if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === 'function') {
-            if (user && user.id) {
-                window.kepixelAnalytics.identify(user.id, user);
-            }
             window.kepixelAnalytics.track(eventName, payload);
         } else {
-            if (user && user.id) {
-                queueAnalyticsCommand(['identify', user.id, user]);
-            }
             queueAnalyticsCommand(['track', eventName, payload]);
         }
     }
