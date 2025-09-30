@@ -13,7 +13,8 @@
             if (url.includes('otp-login') || url.includes('customers/details')) {
                 this.addEventListener("load", () => {
                     if (this.status === 200) {
-                        console.log("[XHR RESPONSE]", method, url, "Status:", this.status, "Body:", this.responseText, "response:", this.response)
+                        let data = JSON.parse(this.responseText);
+                        console.log(data)
                     }
                 })
             }
