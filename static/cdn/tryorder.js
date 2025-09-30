@@ -15,6 +15,9 @@
             if (e.ecommerce == 'undefined') {
                 if (e.event === 'view_item') {
                     let event = 'Product Viewed'
+                    console.log(e.ecommerce)
+                    console.log(e.ecommerce.currency)
+                    console.log(e.ecommerce.item)
                 }
                 if (e.event === 'add_to_cart') {
                     let event = 'Product Added'
