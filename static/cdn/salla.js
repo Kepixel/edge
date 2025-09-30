@@ -200,14 +200,8 @@
     function handlePageView(user) {
         if (window.kepixelAnalytics && typeof window.kepixelAnalytics.page === 'function') {
             window.kepixelAnalytics.page();
-            if (user && user.id) {
-                window.kepixelAnalytics.identify(user.id, user);
-            }
         } else {
             queueAnalyticsCommand(['page']);
-            if (user && user.id) {
-                queueAnalyticsCommand(['identify', user.id, user]);
-            }
         }
     }
 
@@ -236,15 +230,8 @@
         const payload = buildAddToCartPayload(eventData, finalCurrency);
 
         if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === 'function') {
-            if (user && user.id) {
-                window.kepixelAnalytics.identify(user.id, user);
-            }
             window.kepixelAnalytics.track('Product Added', payload);
         } else {
-            if (user && user.id) {
-                queueAnalyticsCommand(['alias', user.id]);
-                queueAnalyticsCommand(['identify', user.id, user]);
-            }
             queueAnalyticsCommand(['Product Added', payload]);
         }
     }
@@ -278,15 +265,8 @@
         const payload = buildPurchasePayload(eventData, finalCurrency);
 
         if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === 'function') {
-            if (user && user.id) {
-                window.kepixelAnalytics.identify(user.id, user);
-            }
             window.kepixelAnalytics.track('Order Completed', payload);
         } else {
-            if (user && user.id) {
-                queueAnalyticsCommand(['alias', user.id]);
-                queueAnalyticsCommand(['identify', user.id, user]);
-            }
             queueAnalyticsCommand(['Order Completed', payload]);
         }
     }
