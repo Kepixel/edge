@@ -65,7 +65,7 @@
         const expires = new Date(Date.now() + (days || 30) * 864e5).toUTCString();
         const val = encodeURIComponent(String(value));
         const isHttps = location.protocol === "https:";
-        document.cookie = `${name}=${val}; expires=${expires}; path=/; SameSite=Lax${isHttps ? "; Secure" : ""}`;
+        document.cookie = `${name}=${val}; expires=${expires}; path=/; SameSite=None`;
     }
 
     function detectPlatform(p) {
