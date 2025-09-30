@@ -12,7 +12,7 @@
                     window.kepixelAnalytics.push(["page"]);
                 }
             }
-            if (e.ecommerce == 'undefined') {
+            if (e.ecommerce != 'undefined') {
                 if (e.event == 'view_item') {
                     let event = 'Product Viewed'
                     let product = {
