@@ -13,7 +13,7 @@
                 }
             }
             if (e.ecommerce == 'undefined') {
-                if (e.event === 'view_item') {
+                if (e.event == 'view_item') {
                     let event = 'Product Viewed'
                     let product = {
                         product_id: e.ecommerce.item.item_id,
