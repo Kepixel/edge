@@ -10,7 +10,7 @@
     XMLHttpRequest.prototype.send = function(body) {
         const { method, url } = this.__log || {}
         if (url && url.includes(URL_FILTER)) {
-            if (url.includes('otp-login')) {
+            if (url.includes('otp-login') || url.includes('customers/details')) {
                 this.addEventListener("load", () => {
                     console.log("[XHR RESPONSE]", method, url, "Status:", this.status, "Body:", this.responseText)
                 })
