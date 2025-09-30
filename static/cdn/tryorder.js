@@ -61,7 +61,7 @@
                     let data = {
                         value: e.ecommerce.total_price,
                         revenue: e.ecommerce.total_price,
-                        currency: e.ecommerce.currency,
+                        currency: e.ecommerce.item_currency ?? e.ecommerce.currency,
                         products: e.ecommerce.items.map((item) => ({
                             product_id: item.main_item_id,
                             sku: item.main_item_id,
@@ -83,6 +83,40 @@
                 }
                 if (e.event === 'purchase') {
                     let event = 'Order Completed'
+                    const calculatedTotal = Array.isArray(e.ecommerce.items)
+                        ? e.ecommerce.items.reduce((sum, item) => {
+                            const price = typeof item.total_price === 'number' ? item.total_price : parseFloat(item.total_price);
+                            return Number.isFinite(price) ? sum + price : sum;
+                        }, 0)
+                        : 0;
+                    const normalizedTotal = Math.round(calculatedTotal * 100) / 100;
+                    const path = window.location.pathname;
+                    const orderId = path.split("/order/")[1];
+
+                    let data = {
+                        checkout_id: orderId,
+                        order_id: orderId,
+                        total: normalizedTotal,
+                        subtotal: normalizedTotal,
+                        revenue: normalizedTotal,
+                        currency: e.ecommerce.item_currency ?? e.ecommerce.currency,
+                        products: e.ecommerce.items.map((item) => ({
+                            product_id: item.main_item_id,
+                            sku: item.main_item_id,
+                            name: item.item_name,
+                            price: item.total_price,
+                            quantity: item.qty,
+                            position: 1,
+                            category: item.group_name,
+                            image_url: item.item_image,
+                        })),
+                    }
+                    if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === "function") {
+                        window.kepixelAnalytics.track(event, data);
+                    } else {
+                        window.kepixelAnalytics = window.kepixelAnalytics || [];
+                        window.kepixelAnalytics.push(["track", event, data]);
+                    }
                 }
                 console.log(e.ecommerce)
             }
