@@ -5,7 +5,7 @@
 
         }, processEvent = function (e) {
             if (e.ecommerce == 'undefined') {
-                console.log(e.event)
+                console.log(e)
             }
         };
         var e = !1, r = [];

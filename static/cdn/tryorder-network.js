@@ -14,13 +14,22 @@
                 this.addEventListener("load", () => {
                     if (this.status === 200) {
                         let data = JSON.parse(this.responseText);
-                        console.log(data.data)
-                        console.log(data.data.countryCode)
-                        console.log(data.data.birthDate)
-                        console.log(data.data.mobile)
-                        console.log(data.data.name)
-                        console.log(data.data.email)
-                        console.log(data.data.gender)
+                        let user = {
+                            name: data.data.name,
+                            gender: data.data.gender,
+                            email: data.data.email,
+                            phone: data.data.mobile,
+                            mobile: data.data.mobile,
+                            birthDate: data.data.birthDate,
+                            countryCode: data.data.countryCode
+                        }
+
+                        if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === 'function') {
+                            window.kepixelAnalytics.identify(data.data.id, user);
+                        } else {
+                            window.kepixelAnalytics = window.kepixelAnalytics || [];
+                            window.kepixelAnalytics.push(["identify", data.data.id, user]);
+                        }
                     }
                 })
             }
