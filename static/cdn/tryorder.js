@@ -4,7 +4,7 @@
         getUserProperties = function () {
 
         }, processEvent = function (e) {
-            console.log(e.event)
+            console.log(e.event, e.ecommerce)
         };
         var e = !1, r = [];
         setTimeout((function () {
