@@ -37,6 +37,24 @@
                 }
                 if (e.event === 'add_to_cart') {
                     let event = 'Product Added'
+                    let product = {
+                        product_id: e.ecommerce.item.item_id,
+                        sku: e.ecommerce.item.item_id,
+                        category: e.ecommerce.item.item_name,
+                        name: e.ecommerce.item.item_name,
+                        brand: e.ecommerce.item.item_name,
+                        price: e.ecommerce.item.price,
+                        quantity: e.ecommerce.item.quantity,
+                        position: 1,
+                        url: window.location.href,
+                        currency: e.ecommerce.currency,
+                    }
+                    if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === "function") {
+                        window.kepixelAnalytics.track(event, product);
+                    } else {
+                        window.kepixelAnalytics = window.kepixelAnalytics || [];
+                        window.kepixelAnalytics.push(["track", event, product]);
+                    }
                 }
                 if (e.event === 'begin_checkout') {
                     let event = 'Checkout Started'
