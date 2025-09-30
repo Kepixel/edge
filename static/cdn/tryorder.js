@@ -58,6 +58,22 @@
                 }
                 if (e.event === 'begin_checkout') {
                     let event = 'Checkout Started'
+                    let data = {
+                        order_id: "40684e8f0eaf000000000000",
+                        value: e.ecommerce.total_price,
+                        revenue: e.ecommerce.total_price,
+                        currency: e.ecommerce.currency,
+                        products: e.ecommerce.items.map((item) => ({
+                            product_id: item.main_item_id,
+                            sku: item.main_item_id,
+                            name: item.item_name,
+                            price: item.total_price,
+                            quantity: item.qty,
+                            position: 1,
+                            category: item.group_name,
+                            image_url: item.item_image,
+                        })),
+                    }
                 }
                 if (e.event === 'purchase') {
                     let event = 'Order Completed'
