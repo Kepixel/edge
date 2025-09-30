@@ -12,7 +12,9 @@
         if (url && url.includes(URL_FILTER)) {
             if (url.includes('otp-login') || url.includes('customers/details')) {
                 this.addEventListener("load", () => {
-                    console.log("[XHR RESPONSE]", method, url, "Status:", this.status, "Body:", this.responseText)
+                    if (this.status === 200) {
+                        console.log("[XHR RESPONSE]", method, url, "Status:", this.status, "Body:", this.responseText, "response:", this.response)
+                    }
                 })
             }
 
