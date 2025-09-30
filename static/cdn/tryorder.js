@@ -4,7 +4,6 @@
         getUserProperties = function () {
 
         }, processEvent = function (e) {
-            console.log(e)
             if (e.event === 'gtm.load') {
                 if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === 'function') {
                     window.kepixelAnalytics.page();
@@ -15,9 +14,18 @@
             }
             if (e.ecommerce == 'undefined') {
                 if (e.event === 'view_item') {
-
+                    let event = 'Product Viewed'
                 }
-                console.log(e)
+                if (e.event === 'add_to_cart') {
+                    let event = 'Product Added'
+                }
+                if (e.event === 'begin_checkout') {
+                    let event = 'Checkout Started'
+                }
+                if (e.event === 'purchase') {
+                    let event = 'Order Completed'
+                }
+                console.log(e.ecommerce)
             }
         };
         var e = !1, r = [];
