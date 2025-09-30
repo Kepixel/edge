@@ -1,5 +1,5 @@
 ;(() => {
-    const URL_FILTER = "tryorder" // أي URL يحتوي على الكلمة دي هيتعرض
+    const URL_FILTER = "tryorder"
 
     const _open = XMLHttpRequest.prototype.open
     const _send = XMLHttpRequest.prototype.send
@@ -34,4 +34,5 @@
             return _fetch(...args)
         }
     }
+    console.log("Network logger active. Filtering by:", URL_FILTER)
 })()
