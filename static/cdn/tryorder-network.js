@@ -14,7 +14,13 @@
                 this.addEventListener("load", () => {
                     if (this.status === 200) {
                         let data = JSON.parse(this.responseText);
-                        console.log(data)
+                        console.log(data.data)
+                        console.log(data.data.countryCode)
+                        console.log(data.data.birthDate)
+                        console.log(data.data.mobile)
+                        console.log(data.data.name)
+                        console.log(data.data.email)
+                        console.log(data.data.gender)
                     }
                 })
             }
