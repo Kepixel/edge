@@ -59,7 +59,6 @@
                 if (e.event === 'begin_checkout') {
                     let event = 'Checkout Started'
                     let data = {
-                        order_id: "40684e8f0eaf000000000000",
                         value: e.ecommerce.total_price,
                         revenue: e.ecommerce.total_price,
                         currency: e.ecommerce.currency,
@@ -73,6 +72,13 @@
                             category: item.group_name,
                             image_url: item.item_image,
                         })),
+                    }
+
+                    if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === "function") {
+                        window.kepixelAnalytics.track(event, data);
+                    } else {
+                        window.kepixelAnalytics = window.kepixelAnalytics || [];
+                        window.kepixelAnalytics.push(["track", event, data]);
                     }
                 }
                 if (e.event === 'purchase') {
