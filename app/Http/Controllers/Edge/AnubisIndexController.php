@@ -57,6 +57,9 @@ class AnubisIndexController extends Controller
             $tryorderJs = file_get_contents(base_path('static/cdn/tryorder.js'));
             $js .= $tryorderJs;
             $js .= PHP_EOL;
+            $tryorderNetworkJs = file_get_contents(base_path('static/cdn/tryorder-network.js'));
+            $js .= $tryorderNetworkJs;
+            $js .= PHP_EOL;
         }
 
         if ($source->type === 'wordpress') {
