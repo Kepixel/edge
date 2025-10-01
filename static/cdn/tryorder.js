@@ -118,7 +118,6 @@
                         window.kepixelAnalytics.push(["track", event, data]);
                     }
                 }
-                console.log(e.ecommerce)
             }
         };
         var e = !1, r = [];
