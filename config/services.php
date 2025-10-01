@@ -46,6 +46,6 @@ return [
         'health_check_chat_id' => env('TELEGRAM_HEALTH_CHECK_CHAT_ID'),
     ],
     'teams' =>  [
-        'base_path' => env('TEAMS_BASE_PATH', '/home/forge/app.kepixel.com/teams'),
+        'base_path' => env('TEAMS_BASE_PATH', '/home/forge/teams'),
     ]
 ];
