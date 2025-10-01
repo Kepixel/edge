@@ -83,8 +83,8 @@
                 }
                 if (e.event === 'purchase') {
                     let event = 'Order Completed'
-                    const calculatedTotal = Array.isArray(e.ecommerce.items)
-                        ? e.ecommerce.items.reduce((sum, item) => {
+                    const calculatedTotal = Array.isArray(e.ecommerce.purchase.items)
+                        ? e.ecommerce.purchase.items.reduce((sum, item) => {
                             const price = typeof item.total_price === 'number' ? item.total_price : parseFloat(item.total_price);
                             return Number.isFinite(price) ? sum + price : sum;
                         }, 0)
@@ -100,7 +100,7 @@
                         subtotal: normalizedTotal,
                         revenue: normalizedTotal,
                         currency: e.ecommerce.item_currency ?? e.ecommerce.currency,
-                        products: e.ecommerce.items.map((item) => ({
+                        products: e.ecommerce.purchase.items.map((item) => ({
                             product_id: item.main_item_id,
                             sku: item.main_item_id,
                             name: item.item_name,
