@@ -49,7 +49,7 @@ class EventUploadsAction extends Controller
                 ];
 
                 // Broadcast the event
-                broadcast(new LiveEvent($channelName, $eventData));
+//                broadcast(new LiveEvent($channelName, $eventData));
             }
         }
 

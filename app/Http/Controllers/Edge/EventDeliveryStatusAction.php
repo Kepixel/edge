@@ -66,7 +66,7 @@ class EventDeliveryStatusAction extends Controller
 
                 // Broadcast to destination-specific channel
                 $channelName = 'live-destinations.'.$destination->id;
-                broadcast(new LiveEvent($channelName, $eventData));
+//                broadcast(new LiveEvent($channelName, $eventData));
 
                 // Persist event delivery log for daily reporting
                 // Ensure payload is properly handled to prevent array-to-string conversion errors
