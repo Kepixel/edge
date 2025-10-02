@@ -150,7 +150,7 @@ class ProcessRudderRequest implements ShouldQueue
             $this->injectUserTraits();
         }
 
-        $port = $validationResult['port'];
+//        $port = $validationResult['port'];
         $url = "http://localhost:8080/$path";
         $headers = $this->headers;
         $headers['authorization'] = 'Basic '.base64_encode($source->write_key.':');
