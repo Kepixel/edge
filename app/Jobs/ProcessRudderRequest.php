@@ -151,7 +151,7 @@ class ProcessRudderRequest implements ShouldQueue
         }
 
         $port = $validationResult['port'];
-        $url = "http://localhost:$port/$path";
+        $url = "http://localhost:8080/$path";
         $headers = $this->headers;
         $headers['authorization'] = 'Basic '.base64_encode($source->write_key.':');
 
