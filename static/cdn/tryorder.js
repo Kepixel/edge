@@ -22,6 +22,7 @@
                         name: e.ecommerce.item.item_name,
                         brand: e.ecommerce.item.item_name,
                         price: e.ecommerce.item.price,
+                        value: e.ecommerce.item.price,
                         quantity: 1,
                         currency: e.ecommerce.currency,
                         position: 1,
@@ -44,6 +45,7 @@
                         name: e.ecommerce.item.item_name,
                         brand: e.ecommerce.item.item_name,
                         price: e.ecommerce.item.price,
+                        value: e.ecommerce.item.price,
                         quantity: e.ecommerce.item.quantity,
                         position: 1,
                         url: window.location.href,
@@ -99,6 +101,7 @@
                         total: normalizedTotal,
                         subtotal: normalizedTotal,
                         revenue: normalizedTotal,
+                        value: normalizedTotal,
                         currency: e.ecommerce.item_currency ?? e.ecommerce.currency,
                         products: e.ecommerce.purchase.items.map((item) => ({
                             product_id: item.main_item_id,
