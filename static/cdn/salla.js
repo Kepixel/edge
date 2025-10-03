@@ -328,6 +328,37 @@
         }
     }
 
+    function handleDetail(eventData, user, currency) {
+        const p = eventData?.ecommerce?.detail?.products?.[0] || {};
+        const category =
+            p?.category ||
+            (Array.isArray(p?.categories) && p.categories[0]?.name) ||
+            "";
+
+        const payload = {
+            product_id: p?.id != null ? String(p.id) : undefined,
+            name: p?.name || "",
+            category,
+            brand: p?.brand || "",
+            variant: p?.variant || "",
+            price: Number.isFinite(Number(p?.price)) ? Number(p.price) : undefined,
+            quantity: 1,
+            currency: currency || undefined,
+            image_url: p?.image || undefined,
+            url:
+                typeof window !== "undefined" && window.location?.href
+                    ? window.location.href
+                    : undefined,
+        };
+
+
+        if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === 'function') {
+            window.kepixelAnalytics.track('Product Viewed', payload);
+        } else {
+            queueAnalyticsCommand(['Product Viewed', payload]);
+        }
+    }
+
     function isTrackedEvent(eventName) {
         return !!eventName && TRACKED_EVENTS.includes(eventName);
     }
@@ -378,7 +409,7 @@
         }
 
         if (eventData.event === 'detail') {
-            console.log(eventData)
+            handleDetail(eventData, user, currency || getCurrencyCookie());
         }
     }
 
