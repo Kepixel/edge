@@ -214,14 +214,19 @@
             value: product.price,
             content_id: String(product.id),
             content_type: 'product',
-            items: [{
-                item_id: product.id.toString(),
-                item_name: product.name,
-                item_category: product.category,
-                item_brand: product.brand,
-                quantity: product.quantity,
-                price: product.price
-            }]
+            product_id: String(product.id),
+            name: product.name,
+            category: product.category,
+            brand: product.brand || "",
+            variant: product.variant || "",
+            price: product.price,
+            quantity: product.quantity,
+            image_url: product.image,
+            url: product.url || "",
+            sku: product.sku || "",
+            cart_id: ecommerce.cart_id || "",
+            coupon: ecommerce.coupon || "",
+            position: product.position || 1
         };
     }
 
