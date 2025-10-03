@@ -15,208 +15,137 @@ class GetNameSpaceConfigAction extends Controller
 {
     public function __invoke(): JsonResponse
     {
-        $teams = Team::query()
-            ->select(['id', 'name'])
-            ->whereHas('destinationSources')
-            ->orderBy('name')
-            ->get();
-
-        if ($teams->isEmpty()) {
-            return response()->json([]);
-        }
-
-        $teamIds = $teams->pluck('id');
-
-        $sources = Source::query()
-            ->select(['id', 'team_id', 'name', 'write_key'])
-            ->whereIn('team_id', $teamIds)
-            ->orderBy('name')
-            ->get()
-            ->groupBy('team_id');
-
-        $links = DestinationSource::query()
-            ->select(['id', 'team_id', 'source_id', 'destination_id', 'event_mappings', 'status'])
-            ->whereIn('team_id', $teamIds)
-            ->where('status', 'configured')
-            ->get();
-
-        $destinationIds = $links->pluck('destination_id')->unique()->all();
-
-        $destinations = empty($destinationIds)
-            ? collect()
-            : Destination::query()
-                ->select(['id', 'name', 'platform', 'status', 'config'])
-                ->whereIn('id', $destinationIds)
-                ->get()
-                ->keyBy('id');
-
-        $linksBySource = $links->groupBy('source_id');
-
         $allConfig = [];
+        $teams = Team::whereHas('destinationSources')->get();
 
         foreach ($teams as $team) {
-            $teamSources = $sources->get($team->id, collect());
-            $allConfig[$team->id] = $this->buildConfig($team->id, $teamSources, $linksBySource, $destinations);
+            $workspaceId = $team->id;
+
+            $baseSource = [
+                'config' => [
+                    'eventUpload' => true, // todo make it dynamic
+                    'eventUploadTS' => 1752055686836, // todo make it dynamic
+                ],
+                'liveEventsConfig' => [
+                    'eventUpload' => true, // todo make it dynamic
+                    'eventUploadTS' => 1752055686836, // todo make it dynamic
+                ],
+                'id' => '', // This will be set later
+                'workspaceId' => $workspaceId,
+                'destinations' => [
+                ],
+                'sourceDefinition' => [
+                    'options' => [
+                        'botEventManagement' => true,
+                        'sdkExecutionEnvironment' => 'client',
+                    ],
+                    'config' => null,
+                    'configSchema' => [],
+                    'uiConfig' => [],
+                    'name' => 'Javascript',
+                    'id' => '1TW48i2bIzEl1HPf825cEznfIM8',
+                    'displayName' => 'JavaScript',
+                    'category' => null,
+                    'createdAt' => '2019-11-12T12:39:19.885Z',
+                    'updatedAt' => '2025-05-05T10:35:39.408Z',
+                    'type' => 'web',
+                ],
+                'name' => '', // This will be generated later
+                'writeKey' => '', // This will be generated later
+                'enabled' => true,
+                'deleted' => false,
+                'createdBy' => '2nEqgMFsN8z45NuJpqMZCB1bWZl',
+                'transient' => false,
+                'secretVersion' => null,
+                'createdAt' => '2025-07-06T15:07:54.629Z',
+                'updatedAt' => '2025-07-09T10:08:06.836Z',
+                'geoEnrichment' => [
+                    'enabled' => false,
+                ],
+                'sourceDefinitionId' => '1TW48i2bIzEl1HPf825cEznfIM8',
+            ];
+
+            $sources = [];
+            $connections = [];
+            $uniqueDestinations = [];
+
+            $sourceModels = Source::with('destinations')->where('team_id', $team->id)->get();
+
+            foreach ($sourceModels as $source) {
+                $sourceConfig = $baseSource;
+                $sourceConfig['name'] = $source->name;
+                $sourceConfig['id'] = $source->id;
+                $sourceConfig['writeKey'] = $source->write_key;
+
+                $sourceDestinations = [];
+
+                foreach ($source->destinations as $destinationModel) {
+                    if ($destinationModel->status !== 'configured') {
+                        continue;
+                    }
+
+                    $config = $destinationModel->config;
+                    switch ($destinationModel->platform) {
+                        case 'facebook-conversions':
+                            $destination = $this->getMetaDestination($team->id);
+                            $destination['config']['datasetId'] = $config['pixel_id'] ?? $config['datasetId'];
+                            $destination['config']['accessToken'] = $config['access_token'] ?? $config['accessToken'];
+                            $destination['config']['eventsToEvents'] = $destinationModel->pivot->event_mappings;
+                            break;
+                        case 'tiktok-ads':
+                            $destination = $this->getTikTokDestination($team->id);
+                            $destination['config']['accessToken'] = $config['access_token'] ?? $config['accessToken'];
+                            $destination['config']['pixelCode'] = $config['pixel_id'] ?? $config['pixelCode'];
+                            $destination['config']['eventsToStandard'] = $destinationModel->pivot->event_mappings;
+
+                            break;
+                        case 'snapchat-conversion':
+                            $destination = $this->getSnapchatDestination($team->id);
+                            $destination['config']['apiKey'] = $config['access_token'] ?? $config['apiKey'];
+                            $destination['config']['pixelId'] = $config['pixel_id'] ?? $config['pixelId'];
+                            $destination['config']['rudderEventsToSnapEvents'] = $destinationModel->pivot->event_mappings;
+                            break;
+                        case 'google-analytics-4':
+                            $destination = $this->getGoogleAnalyticsDestination($team->id);
+                            $destination['config']['apiSecret'] = $config['api_secret'] ?? $config['apiSecret'];
+                            $destination['config']['measurementId'] = $config['measurement_id'] ?? $config['measurementId'];
+                            break;
+                        default:
+                            $destination = [];
+                    }
+                    if (empty($destination)) {
+                        continue;
+                    }
+
+                    $destination['id'] = $destinationModel->id;
+                    $destination['name'] = $destinationModel->name ?? 'no name';
+                    $sourceDestinations[] = $destination;
+                    $connections[$source->id.$destinationModel->id] = [
+                        'sourceId' => $source->id,
+                        'destinationId' => $destinationModel->id,
+                        'enabled' => $destinationModel->status === 'configured',
+                        'processorEnabled' => $destinationModel->status === 'configured',
+                    ];
+                }
+
+                $sourceConfig['destinations'] = $sourceDestinations;
+                $sources[] = $sourceConfig;
+            }
+
+            $baseConfig = [
+                'workspaceId' => $workspaceId,
+                'sources' => $sources,
+//                'destinations' => array_values($uniqueDestinations),
+                'connections' => empty($connections) ? new stdClass : $connections,
+            ];
+
+            $allConfig[$team->id] = $baseConfig;
         }
 
         return response()->json($allConfig);
     }
 
-    private function buildConfig(string $workspaceId, Collection $sources, Collection $linksBySource, Collection $destinations): array
-    {
-        if ($sources->isEmpty()) {
-            return $this->baseConfig($workspaceId, [], []);
-        }
-
-        $sourceConfigs = [];
-        $connections = [];
-
-        foreach ($sources as $source) {
-            $sourceConfig = $this->baseSource($workspaceId);
-            $sourceConfig['name'] = $source->name;
-            $sourceConfig['id'] = $source->id;
-            $sourceConfig['writeKey'] = $source->write_key;
-
-            if ($source->is_live_event_enabled) {
-                $sourceConfig['config']['eventUpload'] = true;
-                $sourceConfig['config']['eventUploadTS'] = (int) now()->valueOf();
-                $sourceConfig['liveEventsConfig']['eventUpload'] = true;
-                $sourceConfig['liveEventsConfig']['eventUploadTS'] = (int) now()->valueOf();
-            }
-
-
-            $destinationConfigs = [];
-
-            foreach ($linksBySource->get($source->id, collect()) as $link) {
-                $destination = $destinations->get($link->destination_id);
-
-                if (! $destination || $destination->status !== 'configured') {
-                    continue;
-                }
-
-                $payload = $this->buildDestinationPayload($destination, $link, $workspaceId);
-
-                if (! $payload) {
-                    continue;
-                }
-
-                $destinationConfigs[] = $payload;
-
-                $connections[$source->id.$destination->id] = [
-                    'sourceId' => $source->id,
-                    'destinationId' => $destination->id,
-                    'enabled' => true,
-                    'processorEnabled' => true,
-                ];
-            }
-
-            $sourceConfig['destinations'] = $destinationConfigs;
-            $sourceConfigs[] = $sourceConfig;
-        }
-
-        return $this->baseConfig($workspaceId, $sourceConfigs, $connections);
-    }
-
-    private function baseConfig(string $workspaceId, array $sources, array $connections): array
-    {
-        return [
-            'workspaceId' => $workspaceId,
-            'sources' => $sources,
-            'connections' => $connections === [] ? new stdClass : $connections,
-        ];
-    }
-
-    private function baseSource(string $workspaceId): array
-    {
-        return [
-            'config' => [
-                'eventUpload' => false,
-                'eventUploadTS' => 1752055686836,
-            ],
-            'liveEventsConfig' => [
-                'eventUpload' => false,
-                'eventUploadTS' => 1752055686836,
-            ],
-            'id' => '',
-            'workspaceId' => $workspaceId,
-            'destinations' => [],
-            'sourceDefinition' => [
-                'options' => [
-                    'botEventManagement' => true,
-                    'sdkExecutionEnvironment' => 'client',
-                ],
-                'config' => null,
-                'configSchema' => [],
-                'uiConfig' => [],
-                'name' => 'Javascript',
-                'id' => '1TW48i2bIzEl1HPf825cEznfIM8',
-                'displayName' => 'JavaScript',
-                'category' => null,
-                'createdAt' => '2019-11-12T12:39:19.885Z',
-                'updatedAt' => '2025-05-05T10:35:39.408Z',
-                'type' => 'web',
-            ],
-            'name' => '',
-            'writeKey' => '',
-            'enabled' => true,
-            'deleted' => false,
-            'createdBy' => '2nEqgMFsN8z45NuJpqMZCB1bWZl',
-            'transient' => false,
-            'secretVersion' => null,
-            'createdAt' => '2025-07-06T15:07:54.629Z',
-            'updatedAt' => '2025-07-09T10:08:06.836Z',
-            'geoEnrichment' => [
-                'enabled' => false,
-            ],
-            'sourceDefinitionId' => '1TW48i2bIzEl1HPf825cEznfIM8',
-        ];
-    }
-
-    private function buildDestinationPayload(Destination $destination, DestinationSource $link, string $workspaceId): ?array
-    {
-        $template = match ($destination->platform) {
-            'facebook-conversions' => $this->getMetaDestination($workspaceId),
-            'tiktok-ads' => $this->getTikTokDestination($workspaceId),
-            'snapchat-conversion' => $this->getSnapchatDestination($workspaceId),
-            'google-analytics-4' => $this->getGoogleAnalyticsDestination($workspaceId),
-            default => null,
-        };
-
-        if (! $template) {
-            return null;
-        }
-
-        $config = $destination->config ?? [];
-
-        $template['id'] = $destination->id;
-        $template['name'] = $destination->name ?? 'no name';
-
-        switch ($destination->platform) {
-            case 'facebook-conversions':
-                $template['config']['datasetId'] = $config['pixel_id'] ?? $config['datasetId'] ?? '';
-                $template['config']['accessToken'] = $config['access_token'] ?? $config['accessToken'] ?? '';
-                $template['config']['eventsToEvents'] = $link->event_mappings ?? [];
-                break;
-            case 'tiktok-ads':
-                $template['config']['accessToken'] = $config['access_token'] ?? $config['accessToken'] ?? '';
-                $template['config']['pixelCode'] = $config['pixel_id'] ?? $config['pixelCode'] ?? '';
-                $template['config']['eventsToStandard'] = $link->event_mappings ?? [];
-                break;
-            case 'snapchat-conversion':
-                $template['config']['apiKey'] = $config['access_token'] ?? $config['apiKey'] ?? '';
-                $template['config']['pixelId'] = $config['pixel_id'] ?? $config['pixelId'] ?? '';
-                $template['config']['rudderEventsToSnapEvents'] = $link->event_mappings ?? [];
-                break;
-            case 'google-analytics-4':
-                $template['config']['apiSecret'] = $config['api_secret'] ?? $config['apiSecret'] ?? '';
-                $template['config']['measurementId'] = $config['measurement_id'] ?? $config['measurementId'] ?? '';
-                break;
-        }
-
-        return $template;
-    }
-
-    private function getMetaDestination(string $workspaceId): array
+    public function getMetaDestination(string $workspaceId): array
     {
         return [
             'secretConfig' => [],
@@ -408,7 +337,7 @@ class GetNameSpaceConfigAction extends Controller
         ];
     }
 
-    private function getTikTokDestination(string $workspaceId): array
+    public function getTikTokDestination(string $workspaceId): array
     {
         return [
             'secretConfig' => [],
@@ -621,7 +550,7 @@ class GetNameSpaceConfigAction extends Controller
         ];
     }
 
-    private function getSnapchatDestination(string $workspaceId): array
+    public function getSnapchatDestination(string $workspaceId): array
     {
         return [
             'secretConfig' => [],
@@ -820,7 +749,7 @@ class GetNameSpaceConfigAction extends Controller
         ];
     }
 
-    private function getGoogleAnalyticsDestination(string $workspaceId): array
+    public function getGoogleAnalyticsDestination(string $workspaceId): array
     {
         return [
             'secretConfig' => [],
