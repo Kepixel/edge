@@ -222,7 +222,7 @@
             price: product.price,
             quantity: product.quantity,
             image_url: product.image,
-            url: product.url || "",
+            url: product.url || window.location.href || "",
             sku: product.sku || "",
             cart_id: ecommerce.cart_id || "",
             coupon: ecommerce.coupon || "",
