@@ -751,6 +751,8 @@ class GetNameSpaceConfigAction extends Controller
 
     public function getGoogleAnalyticsDestination(string $workspaceId): array
     {
+        return [];
+
         return [
             'secretConfig' => [],
             'config' => [
