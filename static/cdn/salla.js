@@ -320,6 +320,14 @@
         if (eventData.event === 'addToCart') {
             handleAddToCart(eventData, user, currency || getCurrencyCookie());
         }
+
+        if (eventData.event === 'impressions') {
+            console.log(eventData)
+        }
+
+        if (eventData.event === 'detail') {
+            console.log(eventData)
+        }
     }
 
     const queuedEvents = [];
