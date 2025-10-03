@@ -9,6 +9,7 @@ use App\Http\Controllers\Edge\EdgeOptionsController;
 use App\Http\Controllers\Edge\EventDeliveryStatusAction;
 use App\Http\Controllers\Edge\EventUploadsAction;
 use App\Http\Controllers\Edge\SourceConfigController;
+use App\Http\Controllers\GetNameSpaceConfigAction;
 use Illuminate\Support\Facades\Route;
 
 Route::domain('edge.kepixel.com')->group(function () {
@@ -34,12 +35,7 @@ Route::domain('config.kepixel.com')->group(function () {
         return response('', 204);
     });
 
-    Route::any('/data-plane/v1/namespaces/{token}/config', function ($token) {
-        $config = base_path('../config.json');
-        return response()->file($config, [
-            'Content-Type' => 'application/json'
-        ]);
-    });
+    Route::any('/data-plane/v1/namespaces/{token}/config', GetNameSpaceConfigAction::class);
 
     Route::get('/', ConfigIndexController::class);
 
