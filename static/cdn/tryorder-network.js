@@ -19,7 +19,7 @@
                             gender: data.data.gender,
                             email: data.data.email,
                             phone: data.data.mobile,
-                            mobile: data.data.mobile,
+                            mobile: data.data.mobile ?? data.data.phone + '@tryorder.com',
                             birthDate: data.data.birthDate,
                             countryCode: data.data.countryCode
                         }
