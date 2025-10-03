@@ -212,7 +212,7 @@
         return {
             currency: currency,
             value: product.price,
-            content_id: product.id,
+            content_id: String(product.id),
             content_type: 'product',
             items: [{
                 item_id: product.id.toString(),
