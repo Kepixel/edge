@@ -77,6 +77,14 @@ class GetNameSpaceConfigAction extends Controller
             $sourceConfig['id'] = $source->id;
             $sourceConfig['writeKey'] = $source->write_key;
 
+            if ($source->is_live_event_enabled) {
+                $sourceConfig['config']['eventUpload'] = true;
+                $sourceConfig['config']['eventUploadTS'] = (int) now()->valueOf();
+                $sourceConfig['liveEventsConfig']['eventUpload'] = true;
+                $sourceConfig['liveEventsConfig']['eventUploadTS'] = (int) now()->valueOf();
+            }
+
+
             $destinationConfigs = [];
 
             foreach ($linksBySource->get($source->id, collect()) as $link) {
@@ -122,11 +130,11 @@ class GetNameSpaceConfigAction extends Controller
     {
         return [
             'config' => [
-                'eventUpload' => true,
+                'eventUpload' => false,
                 'eventUploadTS' => 1752055686836,
             ],
             'liveEventsConfig' => [
-                'eventUpload' => true,
+                'eventUpload' => false,
                 'eventUploadTS' => 1752055686836,
             ],
             'id' => '',
