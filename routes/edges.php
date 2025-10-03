@@ -35,6 +35,8 @@ Route::domain('config.kepixel.com')->group(function () {
         return response('', 204);
     });
 
+    Route::any('/data-plane/v1/namespaces/{token}/configs', GetNameSpaceConfigAction::class);
+
     Route::any('/data-plane/v1/namespaces/{token}/config', function ($token) {
         $config = base_path('../config.json');
         return response()->file($config, [
