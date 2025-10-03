@@ -276,6 +276,58 @@
         }
     }
 
+    function inferListCategory(imps) {
+        // pick the most frequent category in the list
+        const freq = {};
+        for (const p of imps) {
+            const c = p?.category || (Array.isArray(p.categories) && p.categories[0]?.name) || null;
+            if (!c) continue;
+            freq[c] = (freq[c] || 0) + 1;
+        }
+        let best = undefined;
+        let count = 0;
+        for (const [k, v] of Object.entries(freq)) {
+            if (v > count) {
+                count = v;
+                best = k;
+            }
+        }
+        return best;
+    }
+
+    function inferListId(imps) {
+        // simple stable list id based on the top category
+        const c = inferListCategory(imps);
+        return c ? `list:${c}` : undefined;
+    }
+
+    function handleImpressions(eventData, user, currency) {
+        const imps = eventData?.ecommerce?.impressions || [];
+
+        const products = imps.map((p, idx) => ({
+            product_id: String(p.id),
+            name: p.name || "",
+            category: p.category || (Array.isArray(p.categories) && p.categories[0]?.name) || "",
+            brand: p.brand || "",
+            price: isFinite(Number(p.price)) ? Number(p.price) : null,
+            currency,
+            position: Number.isFinite(p.position) ? p.position : idx + 1,
+            quantity: p.quantity != null && isFinite(Number(p.quantity)) ? Number(p.quantity) : 1
+        })).filter(x => x.product_id && x.name);
+
+        const payload = {
+            category: inferListCategory(imps),
+            list_id: inferListId(imps),
+            products
+        };
+
+        if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === 'function') {
+            window.kepixelAnalytics.track('Product List Viewed', payload);
+        } else {
+            queueAnalyticsCommand(['Product List Viewed', payload]);
+        }
+    }
+
     function isTrackedEvent(eventName) {
         return !!eventName && TRACKED_EVENTS.includes(eventName);
     }
@@ -322,7 +374,7 @@
         }
 
         if (eventData.event === 'impressions') {
-            console.log(eventData)
+            handleImpressions(eventData, user, currency || getCurrencyCookie());
         }
 
         if (eventData.event === 'detail') {
