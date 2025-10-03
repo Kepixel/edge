@@ -315,10 +315,15 @@
             quantity: p.quantity != null && isFinite(Number(p.quantity)) ? Number(p.quantity) : 1
         })).filter(x => x.product_id && x.name);
 
+        const category = inferListCategory(imps);
+        const listId = inferListId(imps);
+
         const payload = {
-            category: inferListCategory(imps),
-            list_id: inferListId(imps),
-            products
+            category,
+            list_id: listId,
+            products,
+            content_id: listId || (products[0]?.product_id),
+            content_type: DEFAULT_CONTENT_TYPE
         };
 
         if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === 'function') {
@@ -335,8 +340,12 @@
             (Array.isArray(p?.categories) && p.categories[0]?.name) ||
             "";
 
+        const productId = p?.id != null ? String(p.id) : undefined;
+
         const payload = {
-            product_id: p?.id != null ? String(p.id) : undefined,
+            product_id: productId,
+            content_id: productId,
+            content_type: DEFAULT_CONTENT_TYPE,
             name: p?.name || "",
             category,
             brand: p?.brand || "",
