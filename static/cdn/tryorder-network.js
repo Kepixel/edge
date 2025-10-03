@@ -17,7 +17,7 @@
                         let user = {
                             name: data.data.name,
                             gender: data.data.gender,
-                            email: data.data.email ?? data.data.phone + '@tryorder.com',
+                            email: data.data.email ?? (data.data.phone || data.data.mobile) + '@tryorder.com',
                             phone: data.data.mobile,
                             mobile: data.data.mobile,
                             birthDate: data.data.birthDate,
