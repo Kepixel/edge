@@ -27,6 +27,100 @@
         ...YAHOO_KEYS, ...APPLE_KEYS, ...HUBSPOT_KEYS, ...EXTRA_KEYS
     ];
 
+    const storage = (() => {
+        const sources = [
+            () => window.localStorage,
+            () => window.sessionStorage
+        ];
+        for (let i = 0; i < sources.length; i++) {
+            try {
+                const s = sources[i]();
+                if (!s) continue;
+                const testKey = "__kepixel_storage_test__";
+                s.setItem(testKey, "1");
+                s.removeItem(testKey);
+                return s;
+            } catch (err) {
+                /* try next storage */
+            }
+        }
+        return null;
+    })();
+
+    function getCookie(name) {
+        const parts = document.cookie ? document.cookie.split("; ") : [];
+        for (let i = 0; i < parts.length; i++) {
+            const row = parts[i];
+            if (row.startsWith(name + "=")) {
+                return decodeURIComponent(row.slice(name.length + 1));
+            }
+        }
+        return null;
+    }
+
+    function setCookie(name, value, days) {
+        if (value == null || value === "") return;
+        if (FIRST_TOUCH && getExistingValue(name) != null) return;
+        const expires = new Date(Date.now() + (days || 30) * 864e5).toUTCString();
+        const encoded = encodeURIComponent(String(value));
+        const cookie = [`${name}=${encoded}`, `expires=${expires}`, "path=/"];
+        const isHttps = location.protocol === "https:";
+        if (isHttps) {
+            cookie.push("SameSite=None", "Secure");
+        } else {
+            cookie.push("SameSite=Lax");
+        }
+        document.cookie = cookie.join("; ");
+    }
+
+    function getStoredValue(name) {
+        if (!storage) return null;
+        try {
+            const raw = storage.getItem(name);
+            if (!raw) return null;
+            const payload = JSON.parse(raw);
+            if (payload && typeof payload === "object" && "value" in payload) {
+                if (payload.expiresAt && Date.now() > payload.expiresAt) {
+                    storage.removeItem(name);
+                    return null;
+                }
+                return payload.value;
+            }
+            return raw;
+        } catch (err) {
+            const raw = storage.getItem(name);
+            return raw || null;
+        }
+    }
+
+    function setStoredValue(name, value, days) {
+        if (!storage) return;
+        if (FIRST_TOUCH && getExistingValue(name) != null) return;
+        if (value == null || value === "") return;
+        const expiresAt = Date.now() + (days || 30) * 864e5;
+        const payload = {
+            value: String(value),
+            expiresAt
+        };
+        try {
+            storage.setItem(name, JSON.stringify(payload));
+        } catch (err) {
+            /* noop */
+        }
+    }
+
+    function getExistingValue(name) {
+        const stored = getStoredValue(name);
+        if (stored != null) return stored;
+        return getCookie(name);
+    }
+
+    function persistValue(name, value, days) {
+        if (value == null || value === "") return;
+        setStoredValue(name, value, days);
+        setCookie(name, value, days);
+    }
+
     function parseQuery(qs) {
         const obj = {};
         if (!qs) return obj;
@@ -46,26 +140,6 @@
         const hash = window.location.hash || "";
         const qIndex = hash.indexOf("?");
         return qIndex === -1 ? {} : parseQuery(hash.slice(qIndex));
-    }
-
-    function getCookie(name) {
-        const parts = document.cookie ? document.cookie.split("; ") : [];
-        for (let i = 0; i < parts.length; i++) {
-            const row = parts[i];
-            if (row.startsWith(name + "=")) {
-                return decodeURIComponent(row.slice(name.length + 1));
-            }
-        }
-        return null;
-    }
-
-    function setCookie(name, value, days) {
-        if (value == null || value === "") return;
-        if (FIRST_TOUCH && getCookie(name)) return;
-        const expires = new Date(Date.now() + (days || 30) * 864e5).toUTCString();
-        const val = encodeURIComponent(String(value));
-        const isHttps = location.protocol === "https:";
-        document.cookie = `${name}=${val}; expires=${expires}; path=/; SameSite=None${isHttps ? "; Secure" : ""}`;
     }
 
     function detectPlatform(p) {
@@ -88,55 +162,70 @@
         const nowSeconds = Math.floor(Date.now() / 1000);
         if (params.fbclid) {
             const fbc = `fb.1.${nowSeconds}.${params.fbclid}`;
-            setCookie("_fbc", fbc, 90);
+            persistValue("_fbc", fbc, 90);
         }
-        if (!getCookie("_fbp")) {
+        if (!getExistingValue("_fbp")) {
             const rand = Math.floor(Math.random() * 1e10);
             const fbp = `fb.1.${nowSeconds}.${rand}`;
-            setCookie("_fbp", fbp, 90);
+            persistValue("_fbp", fbp, 90);
         }
     }
 
     function ensureGoogleFirstParty(params) {
+        const ts = Math.floor(Date.now() / 1000);
         const g = params.gclid;
         if (g) {
-            setCookie("_gcl_aw", g, 90);
-            setCookie("_gcl_dc", g, 90);
-            setCookie("_gcl_gb", g, 90);
-            setCookie("FPGCLAW", g, 90);
-            setCookie("FPGCLDC", g, 90);
+            const formatted = `GCL.${ts}.${g}`;
+            persistValue("_gcl_aw", formatted, 90);
+            persistValue("_gcl_dc", formatted, 90);
+            persistValue("_gcl_gb", formatted, 90);
+            persistValue("FPGCLAW", formatted, 90);
+            persistValue("FPGCLDC", formatted, 90);
+        }
+        const gbraid = params.gbraid;
+        if (gbraid) {
+            const formatted = `GCLB.${ts}.${gbraid}`;
+            persistValue("_gcl_gb", formatted, 90);
+            persistValue("FPGCLGB", formatted, 90);
+        }
+        const wbraid = params.wbraid;
+        if (wbraid) {
+            const formatted = `GCLW.${ts}.${wbraid}`;
+            persistValue("_gcl_gb", formatted, 90);
+            persistValue("FPGCLGB", formatted, 90);
         }
     }
 
     function ensureTikTokCookies(params) {
-        if (params.ttp) setCookie("_ttp", params.ttp, 90);
-        if (!getCookie("_ttp")) {
+        if (params.ttp) persistValue("_ttp", params.ttp, 90);
+        const existingTtp = getExistingValue("_ttp");
+        if (!existingTtp || existingTtp === "tt.tt.1") {
             const ts = Math.floor(Date.now()/1000);
             const rand = Math.floor(Math.random()*1e10);
-            setCookie("_ttp", `tt.${ts}.${rand}`, 90);
+            persistValue("_ttp", `tt.${ts}.${rand}`, 90);
         }
     }
 
     function ensureSnapchatCookies(params) {
         const scid = params.sc_click_id || params.snap_click_id || params.sccid || params.ScCid;
-        if (scid) setCookie("_scclid", scid, 90);
-        if (!getCookie("_scid")) {
+        if (scid) persistValue("_scclid", scid, 90);
+        if (!getExistingValue("_scid")) {
             const ts = Math.floor(Date.now()/1000);
             const rand = Math.floor(Math.random()*1e10);
-            setCookie("_scid", `sc.${ts}.${rand}`, 90);
+            persistValue("_scid", `sc.${ts}.${rand}`, 90);
         }
     }
 
     function ensureMicrosoftCookies(params) {
-        if (params.msclkid) setCookie("_uetmsclkid", params.msclkid, 90);
+        if (params.msclkid) persistValue("_uetmsclkid", params.msclkid, 90);
     }
 
     function ensurePinterestCookies(params) {
-        if (params.epik) setCookie("_epik", params.epik, 90);
+        if (params.epik) persistValue("_epik", params.epik, 90);
     }
 
     function ensureTwitterCookies(params) {
-        if (params.twclid) setCookie("_twclid", params.twclid, 90);
+        if (params.twclid) persistValue("_twclid", params.twclid, 90);
     }
 
     const params = getParams();
@@ -145,7 +234,7 @@
     ALL_KEYS.forEach(k => {
         if (params[k]) {
             captured[k] = params[k];
-            setCookie(k, params[k], 90);
+            persistValue(k, params[k], 90);
         }
     });
 
@@ -158,11 +247,11 @@
     ensureTwitterCookies(params);
 
     const platform = detectPlatform(params);
-    if (platform) setCookie("ad_platform", platform, 90);
+    if (platform) persistValue("ad_platform", platform, 90);
 
-    if (document.referrer) setCookie("referrer", document.referrer, 30);
+    if (document.referrer) persistValue("referrer", document.referrer, 30);
 
     if (Object.keys(captured).length) {
-        setCookie("utm_all", JSON.stringify(captured), 90);
+        persistValue("utm_all", JSON.stringify(captured), 90);
     }
 })();
