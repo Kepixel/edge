@@ -216,8 +216,8 @@
             content_type: 'product',
             product_id: String(product.id),
             name: product.name,
-            category: product.category,
-            brand: product.brand || "",
+            category: product.category || "category",
+            brand: product.brand || "brand",
             variant: product.variant || "",
             price: product.price,
             quantity: product.quantity,
@@ -307,8 +307,8 @@
         const products = imps.map((p, idx) => ({
             product_id: String(p.id),
             name: p.name || "",
-            category: p.category || (Array.isArray(p.categories) && p.categories[0]?.name) || "",
-            brand: p.brand || "",
+            category: p.category || (Array.isArray(p.categories) && p.categories[0]?.name) || "category",
+            brand: p.brand || "brand",
             price: isFinite(Number(p.price)) ? Number(p.price) : null,
             currency,
             position: Number.isFinite(p.position) ? p.position : idx + 1,
@@ -338,7 +338,7 @@
         const category =
             p?.category ||
             (Array.isArray(p?.categories) && p.categories[0]?.name) ||
-            "";
+            "category";
 
         const productId = p?.id != null ? String(p.id) : undefined;
 
@@ -348,7 +348,7 @@
             content_type: DEFAULT_CONTENT_TYPE,
             name: p?.name || "",
             category,
-            brand: p?.brand || "",
+            brand: p?.brand || "brand",
             variant: p?.variant || "",
             price: Number.isFinite(Number(p?.price)) ? Number(p.price) : undefined,
             quantity: 1,
