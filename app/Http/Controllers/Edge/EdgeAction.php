@@ -11,6 +11,15 @@ class EdgeAction extends Controller
 {
     public function __invoke(Request $request, $path = '')
     {
+        if ($request->has('properties')) {
+            $properties = $request->get('properties');
+            if (isset($properties['client_dedup_id'])) {
+                return response()->json([
+                    'ok' => true,
+                ], 202);
+            }
+        }
+
         if ($path) {
             $authHeader = $request->header('Authorization');
 
