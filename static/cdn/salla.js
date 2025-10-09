@@ -19,7 +19,7 @@
         // 'Product Added',
         // 'Product Removed',
         'Cart Viewed',
-        'Cart Updated',
+        // 'Cart Updated',
         // 'Checkout Started',
         // 'Checkout Step Viewed',
         // 'Checkout Step Completed',
