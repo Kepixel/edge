@@ -122,35 +122,7 @@ class ProcessRudderRequest implements ShouldQueue
 //            throw new \RuntimeException($validationResult['message']);
 //        }
 
-        $paths = [
-            'v1/i' => 'v1/identify',
-            'v1/t' => 'v1/track',
-            'v1/p' => 'v1/page',
-            'v1/s' => 'v1/screen',
-            'v1/g' => 'v1/group',
-            'v1/a' => 'v1/alias',
-            'v1/b' => 'v1/batch',
-        ];
-
-        $path = $paths[$this->path] ?? $this->path;
-
-        if ($this->isTrackEvent()) {
-            // need to get event from data and validate it
-            $event = $this->data['event'] ?? null;
-            if (! $event) {
-                // This is a non-retryable failure - track event is missing
-                return;
-            }
-            // need to validate event properties data
-            if (! $this->validateTrackEventProperties($event)) {
-                // This is a non-retryable failure - track event properties are invalid
-                return;
-            }
-            $this->injectUserTraits();
-        }
-
-//        $port = $validationResult['port'];
-        $url = "http://localhost:8080/$path";
+        $url = "http://localhost:8080/$this->path";
         $headers = $this->headers;
         $headers['authorization'] = 'Basic '.base64_encode($source->write_key.':');
 
@@ -214,67 +186,6 @@ class ProcessRudderRequest implements ShouldQueue
         // Retry on server errors (5xx) and some client errors
         return $statusCode >= 500 ||
             in_array($statusCode, [408, 429, 502, 503, 504, 522, 524]);
-    }
-
-    /**
-     * Check if the current request is a track event.
-     */
-    private function isTrackEvent(): bool
-    {
-        return $this->path === 'v1/t' || $this->path === 'v1/track';
-    }
-
-    /**
-     * Validate track event properties.
-     */
-    private function validateTrackEventProperties(string $event): bool
-    {
-        $ecommerceEvents = [
-            // Browsing
-            'Products Searched',
-            'Product List Viewed',
-            'Product List Filtered',
-
-            // Promotion
-            'Promotion Viewed',
-            'Promotion Clicked',
-
-            // Ordering
-            'Product Clicked',
-            'Product Viewed',
-            'Product Added',
-            'Product Removed',
-            'Cart Viewed',
-            'Checkout Started',
-            'Checkout Step Viewed',
-            'Checkout Step Completed',
-            'Payment Info Entered',
-            'Order Updated',
-            'Order Completed',
-            'Order Refunded',
-            'Order Cancelled',
-
-            // Coupon
-            'Coupon Entered',
-            'Coupon Applied',
-            'Coupon Denied',
-            'Coupon Removed',
-
-            // Wishlist
-            'Product Added to Wishlist',
-            'Product Removed from Wishlist',
-            'Wishlist Product Added to Cart',
-
-            // Sharing
-            'Product Shared',
-            'Cart Shared',
-
-            // Review
-            'Product Reviewed',
-        ];
-
-        // TODO: Implement validation logic for other track event properties
-        return true;
     }
 
     private function injectUserTraits(): void
