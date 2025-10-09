@@ -1,0 +1,1500 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://schemas.kepixel.com/events/optimized.json",
+    "title": "Kepixel Events Schema (Optimized)",
+    "description": "Enhanced event payload schema with shared definitions, stronger validation hints, and normalized field metadata.",
+    "type": "object",
+    "$defs": {
+        "DetailedProduct": {
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "type": "string"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "coupon": {
+                    "type": "string"
+                },
+                "image_url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "number"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "variant": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "name",
+                "product_id"
+            ],
+            "additionalProperties": false
+        },
+        "ListFilter": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "type",
+                "value"
+            ],
+            "additionalProperties": false
+        },
+        "ListSort": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "type",
+                "value"
+            ],
+            "additionalProperties": false
+        },
+        "ProductReference": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "product_id"
+            ],
+            "additionalProperties": false
+        }
+    },
+    "oneOf": [
+        {
+            "title": "Cart Shared",
+            "type": "object",
+            "properties": {
+                "cart_id": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Cart Shared"
+                },
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/ProductReference"
+                    },
+                    "minItems": 1
+                },
+                "recipient": {
+                    "type": "string"
+                },
+                "share_message": {
+                    "type": "string"
+                },
+                "share_via": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "cart_id",
+                "event",
+                "products",
+                "share_via"
+            ],
+            "description": "Payload schema for the \"Cart Shared\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Cart Viewed",
+            "type": "object",
+            "properties": {
+                "cart_id": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Cart Viewed"
+                },
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/DetailedProduct"
+                    },
+                    "minItems": 1
+                }
+            },
+            "required": [
+                "cart_id",
+                "event",
+                "products"
+            ],
+            "description": "Payload schema for the \"Cart Viewed\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Checkout Started",
+            "type": "object",
+            "properties": {
+                "affiliation": {
+                    "type": "string"
+                },
+                "coupon": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "discount": {
+                    "type": "number"
+                },
+                "event": {
+                    "const": "Checkout Started"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/DetailedProduct"
+                    },
+                    "minItems": 1
+                },
+                "revenue": {
+                    "type": "number"
+                },
+                "shipping": {
+                    "type": "number"
+                },
+                "tax": {
+                    "type": "number"
+                },
+                "value": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "event",
+                "order_id",
+                "products"
+            ],
+            "description": "Payload schema for the \"Checkout Started\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Checkout Step Completed",
+            "type": "object",
+            "properties": {
+                "checkout_id": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Checkout Step Completed"
+                },
+                "payment_method": {
+                    "type": "string"
+                },
+                "shipping_method": {
+                    "type": "string"
+                },
+                "step": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "checkout_id",
+                "event"
+            ],
+            "description": "Payload schema for the \"Checkout Step Completed\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Checkout Step Viewed",
+            "type": "object",
+            "properties": {
+                "checkout_id": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Checkout Step Viewed"
+                },
+                "payment_method": {
+                    "type": "string"
+                },
+                "shipping_method": {
+                    "type": "string"
+                },
+                "step": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "checkout_id",
+                "event"
+            ],
+            "description": "Payload schema for the \"Checkout Step Viewed\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Contact",
+            "type": "object",
+            "properties": {
+                "Birthday": {
+                    "type": "string"
+                },
+                "City": {
+                    "type": "string"
+                },
+                "Company": {
+                    "type": "string"
+                },
+                "Country": {
+                    "type": "string"
+                },
+                "Country code": {
+                    "type": "string"
+                },
+                "Email": {
+                    "type": "string",
+                    "format": "email"
+                },
+                "First name": {
+                    "type": "string"
+                },
+                "Gender": {
+                    "type": "string"
+                },
+                "Job title": {
+                    "type": "string"
+                },
+                "Last name": {
+                    "type": "string"
+                },
+                "Lead ID": {
+                    "type": "string"
+                },
+                "Phone": {
+                    "type": "string"
+                },
+                "Postal code": {
+                    "type": "string"
+                },
+                "State": {
+                    "type": "string"
+                },
+                "State code": {
+                    "type": "string"
+                },
+                "Street Address": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Lead ID"
+            ],
+            "description": "Payload schema for the \"Contact\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Identify",
+            "type": "object",
+            "properties": {
+                "user-id": { "type": "string" },
+                "email": { "type": "string" },
+                "phone": { "type": "string" },
+                "firstname": { "type": "string" },
+                "lastname": { "type": "string" },
+                "title": { "type": "string" },
+                "gender": { "type": "string" },
+                "street_address": { "type": "string" },
+                "city": { "type": "string" },
+                "postal_code": { "type": "string" },
+                "state": { "type": "string" },
+                "state_code": { "type": "string" },
+                "country": { "type": "string" },
+                "country_code": { "type": "string" },
+                "birthday": { "type": "string" },
+                "company": { "type": "string" }
+            },
+            "required": ["user-id"]
+        },
+        {
+            "title": "Form Submitted",
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Form Submitted"
+                },
+                "fields": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": [
+                            "string",
+                            "number",
+                            "boolean",
+                            "array",
+                            "object",
+                            "null"
+                        ]
+                    }
+                },
+                "form_id": {
+                    "type": "string"
+                },
+                "form_label": {
+                    "type": "string"
+                },
+                "form_locale": {
+                    "type": "string"
+                },
+                "form_unit_tag": {
+                    "type": "string"
+                },
+                "formid": {
+                    "type": "string"
+                },
+                "inputs": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "value": {
+                                "type": [
+                                    "string",
+                                    "number",
+                                    "boolean",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "name"
+                        ],
+                        "additionalProperties": false
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                }
+            },
+            "required": [
+                "event"
+            ],
+            "description": "Payload schema for the \"Form Submitted\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Coupon Applied",
+            "type": "object",
+            "properties": {
+                "cart_id": {
+                    "type": "string"
+                },
+                "coupon_id": {
+                    "type": "string"
+                },
+                "coupon_name": {
+                    "type": "string"
+                },
+                "discount": {
+                    "type": "number"
+                },
+                "event": {
+                    "const": "Coupon Applied"
+                },
+                "order_id": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "coupon_id",
+                "event"
+            ],
+            "description": "Payload schema for the \"Coupon Applied\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Coupon Denied",
+            "type": "object",
+            "properties": {
+                "cart_id": {
+                    "type": "string"
+                },
+                "coupon_id": {
+                    "type": "string"
+                },
+                "coupon_name": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Coupon Denied"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "coupon_id",
+                "event",
+                "reason"
+            ],
+            "description": "Payload schema for the \"Coupon Denied\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Coupon Entered",
+            "type": "object",
+            "properties": {
+                "cart_id": {
+                    "type": "string"
+                },
+                "coupon_id": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Coupon Entered"
+                },
+                "order_id": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "coupon_id",
+                "event"
+            ],
+            "description": "Payload schema for the \"Coupon Entered\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Coupon Removed",
+            "type": "object",
+            "properties": {
+                "cart_id": {
+                    "type": "string"
+                },
+                "coupon_id": {
+                    "type": "string"
+                },
+                "coupon_name": {
+                    "type": "string"
+                },
+                "discount": {
+                    "type": "number"
+                },
+                "event": {
+                    "const": "Coupon Removed"
+                },
+                "order_id": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "coupon_id",
+                "event"
+            ],
+            "description": "Payload schema for the \"Coupon Removed\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Lead",
+            "type": "object",
+            "properties": {
+                "Birthday": {
+                    "type": "string"
+                },
+                "City": {
+                    "type": "string"
+                },
+                "Company": {
+                    "type": "string"
+                },
+                "Country": {
+                    "type": "string"
+                },
+                "Country code": {
+                    "type": "string"
+                },
+                "Email": {
+                    "type": "string",
+                    "format": "email"
+                },
+                "First name": {
+                    "type": "string"
+                },
+                "Gender": {
+                    "type": "string"
+                },
+                "Job title": {
+                    "type": "string"
+                },
+                "Last name": {
+                    "type": "string"
+                },
+                "Lead ID": {
+                    "type": "string"
+                },
+                "Phone": {
+                    "type": "string"
+                },
+                "Postal code": {
+                    "type": "string"
+                },
+                "State": {
+                    "type": "string"
+                },
+                "State code": {
+                    "type": "string"
+                },
+                "Street Address": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "Lead ID"
+            ],
+            "description": "Payload schema for the \"Lead\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Order Cancelled",
+            "type": "object",
+            "properties": {
+                "affiliation": {
+                    "type": "string"
+                },
+                "coupon": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "discount": {
+                    "type": "number"
+                },
+                "event": {
+                    "const": "Order Cancelled"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/DetailedProduct"
+                    },
+                    "minItems": 1
+                },
+                "revenue": {
+                    "type": "number"
+                },
+                "shipping": {
+                    "type": "number"
+                },
+                "tax": {
+                    "type": "number"
+                },
+                "total": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "event",
+                "order_id",
+                "products"
+            ],
+            "description": "Payload schema for the \"Order Cancelled\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Order Completed",
+            "type": "object",
+            "properties": {
+                "affiliation": {
+                    "type": "string"
+                },
+                "checkout_id": {
+                    "type": "string"
+                },
+                "coupon": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "discount": {
+                    "type": "number"
+                },
+                "event": {
+                    "const": "Order Completed"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/DetailedProduct"
+                    },
+                    "minItems": 1
+                },
+                "revenue": {
+                    "type": "number"
+                },
+                "shipping": {
+                    "type": "number"
+                },
+                "subtotal": {
+                    "type": "number"
+                },
+                "tax": {
+                    "type": "number"
+                },
+                "total": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "event",
+                "order_id",
+                "products"
+            ],
+            "description": "Payload schema for the \"Order Completed\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Order Refunded",
+            "type": "object",
+            "properties": {
+                "currency": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Order Refunded"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/DetailedProduct"
+                    },
+                    "minItems": 1
+                },
+                "total": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "event",
+                "order_id",
+                "products"
+            ],
+            "description": "Payload schema for the \"Order Refunded\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Order Updated",
+            "type": "object",
+            "properties": {
+                "affiliation": {
+                    "type": "string"
+                },
+                "coupon": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "discount": {
+                    "type": "number"
+                },
+                "event": {
+                    "const": "Order Updated"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/DetailedProduct"
+                    },
+                    "minItems": 1
+                },
+                "revenue": {
+                    "type": "number"
+                },
+                "shipping": {
+                    "type": "number"
+                },
+                "tax": {
+                    "type": "number"
+                },
+                "total": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "event",
+                "order_id",
+                "products"
+            ],
+            "description": "Payload schema for the \"Order Updated\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Payment Info Entered",
+            "type": "object",
+            "properties": {
+                "checkout_id": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Payment Info Entered"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "payment_method": {
+                    "type": "string"
+                },
+                "shipping_method": {
+                    "type": "string"
+                },
+                "step": {
+                    "type": "number"
+                }
+            },
+            "required": [
+                "checkout_id",
+                "event"
+            ],
+            "description": "Payload schema for the \"Payment Info Entered\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Product Added",
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "type": "string"
+                },
+                "cart_id": {
+                    "type": "string"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "coupon": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Product Added"
+                },
+                "image_url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "number"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "variant": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "event",
+                "product_id"
+            ],
+            "description": "Payload schema for the \"Product Added\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Product Added to Wishlist",
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "type": "string"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "coupon": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Product Added to Wishlist"
+                },
+                "image_url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "number"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "variant": {
+                    "type": "string"
+                },
+                "wishlist_id": {
+                    "type": "string"
+                },
+                "wishlist_name": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "event",
+                "name",
+                "product_id",
+                "wishlist_id"
+            ],
+            "description": "Payload schema for the \"Product Added to Wishlist\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Product Clicked",
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "type": "string"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "coupon": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Product Clicked"
+                },
+                "image_url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "number"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "variant": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "event",
+                "product_id"
+            ],
+            "description": "Payload schema for the \"Product Clicked\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Product List Filtered",
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Product List Filtered"
+                },
+                "filters": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/ListFilter"
+                    },
+                    "minItems": 1
+                },
+                "list_id": {
+                    "type": "string"
+                },
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/DetailedProduct"
+                    },
+                    "minItems": 1
+                },
+                "sorts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/ListSort"
+                    },
+                    "minItems": 1
+                }
+            },
+            "required": [
+                "event",
+                "products"
+            ],
+            "description": "Payload schema for the \"Product List Filtered\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Product List Viewed",
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Product List Viewed"
+                },
+                "list_id": {
+                    "type": "string"
+                },
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/DetailedProduct"
+                    },
+                    "minItems": 1
+                }
+            },
+            "required": [
+                "event",
+                "products"
+            ],
+            "description": "Payload schema for the \"Product List Viewed\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Product Removed",
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "type": "string"
+                },
+                "cart_id": {
+                    "type": "string"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "coupon": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Product Removed"
+                },
+                "image_url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "number"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "variant": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "event",
+                "product_id"
+            ],
+            "description": "Payload schema for the \"Product Removed\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Product Removed from Wishlist",
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "type": "string"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "coupon": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Product Removed from Wishlist"
+                },
+                "image_url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "number"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "variant": {
+                    "type": "string"
+                },
+                "wishlist_id": {
+                    "type": "string"
+                },
+                "wishlist_name": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "event",
+                "name",
+                "product_id",
+                "wishlist_id"
+            ],
+            "description": "Payload schema for the \"Product Removed from Wishlist\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Product Reviewed",
+            "type": "object",
+            "properties": {
+                "event": {
+                    "const": "Product Reviewed"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "rating": {
+                    "type": "string"
+                },
+                "review_body": {
+                    "type": "string"
+                },
+                "review_id": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "event",
+                "product_id",
+                "rating",
+                "review_body",
+                "review_id"
+            ],
+            "description": "Payload schema for the \"Product Reviewed\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Product Shared",
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "type": "string"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Product Shared"
+                },
+                "image_url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "recipient": {
+                    "type": "string"
+                },
+                "share_message": {
+                    "type": "string"
+                },
+                "share_via": {
+                    "type": "string"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "variant": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "event",
+                "product_id",
+                "share_via"
+            ],
+            "description": "Payload schema for the \"Product Shared\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Product Viewed",
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "type": "string"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "coupon": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Product Viewed"
+                },
+                "image_url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "number"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "variant": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "event",
+                "product_id"
+            ],
+            "description": "Payload schema for the \"Product Viewed\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Products Searched",
+            "type": "object",
+            "properties": {
+                "event": {
+                    "const": "Products Searched"
+                },
+                "query": {
+                    "type": [
+                        "string",
+                        "object"
+                    ]
+                }
+            },
+            "required": [
+                "event",
+                "query"
+            ],
+            "description": "Payload schema for the \"Products Searched\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Promotion Clicked",
+            "type": "object",
+            "properties": {
+                "creative": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Promotion Clicked"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "string"
+                },
+                "promotion_id": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "event",
+                "name",
+                "position",
+                "promotion_id"
+            ],
+            "description": "Payload schema for the \"Promotion Clicked\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Promotion Viewed",
+            "type": "object",
+            "properties": {
+                "creative": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Promotion Viewed"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "string"
+                },
+                "promotion_id": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "event",
+                "name",
+                "position",
+                "promotion_id"
+            ],
+            "description": "Payload schema for the \"Promotion Viewed\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "WhatsApp Clicked",
+            "type": "object",
+            "properties": {
+                "element_class": {
+                    "type": "string"
+                },
+                "element_id": {
+                    "type": "string"
+                },
+                "element_type": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "WhatsApp Clicked"
+                },
+                "href": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "page_title": {
+                    "type": "string"
+                },
+                "page_url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "selector": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "event"
+            ],
+            "description": "Payload schema for the \"WhatsApp Clicked\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Wishlist Product Added to Cart",
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "type": "string"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "coupon": {
+                    "type": "string"
+                },
+                "event": {
+                    "const": "Wishlist Product Added to Cart"
+                },
+                "image_url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "position": {
+                    "type": "number"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
+                },
+                "sku": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "variant": {
+                    "type": "string"
+                },
+                "wishlist_id": {
+                    "type": "string"
+                },
+                "wishlist_name": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "event",
+                "name",
+                "product_id",
+                "wishlist_id"
+            ],
+            "description": "Payload schema for the \"Wishlist Product Added to Cart\" event.",
+            "additionalProperties": false
+        }
+    ]
+}
