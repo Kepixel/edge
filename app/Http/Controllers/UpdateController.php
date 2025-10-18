@@ -6,6 +6,8 @@ class UpdateController extends Controller
 {
     public function pluginMetadata()
     {
-
+        return response()->json([
+            'name' => 'Anubis',
+        ]);
     }
 }
