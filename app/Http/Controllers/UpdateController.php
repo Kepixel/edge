@@ -6,7 +6,7 @@ class UpdateController extends Controller
 {
     public function pluginMetadata()
     {
-        $version = '1.0.0';
+        $version = '1.0.1';
         $payload = [
             'name'          => 'Kepixel',
             'slug'          => 'kepixel',
