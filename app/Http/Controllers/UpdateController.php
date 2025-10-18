@@ -6,12 +6,12 @@ class UpdateController extends Controller
 {
     public function pluginMetadata()
     {
-        $version = '1.0.1';
+        $version = '1.0.2';
         $payload = [
             'name'          => 'Kepixel',
             'slug'          => 'kepixel',
             'version'       => $version,
-            'download_url'  => "https://github.com/Kepixel/wp/archive/refs/tags/v$version.zip",
+            'download_url'  => 'https://cdn.kepixel.com/wordpress/plugin.zip?v=' . $version,
             'requires'      => '6.0',
             'tested'        => '6.6.2',
             'requires_php'  => '7.4',
