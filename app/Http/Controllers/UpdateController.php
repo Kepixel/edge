@@ -19,11 +19,11 @@ class UpdateController extends Controller
             'homepage'      => 'https://www.kepixel.com/',
             'sections'      => [
                 'description' => 'Bug fixes and improvements',
-                'changelog'   => '1.0.0 Fix X. Improve Y.',
+                'changelog'   => '1.0.2 Fix X. Improve Y.',
             ],
             'banners'       => [
-                'low'  => 'https://edge.kepixel.com/wordpress-plugin/banner-772x250.png',
-                'high' => 'https://edge.kepixel.com/wordpress-plugin/banner-1544x500.png',
+                'low'  => 'https://cdn.kepixel.com/wordpress/banner-772x250.png',
+                'high' => 'https://cdn.kepixel.com/wordpress/banner-1544x500.png',
             ],
         ];
 
