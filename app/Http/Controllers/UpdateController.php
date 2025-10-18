@@ -11,7 +11,7 @@ class UpdateController extends Controller
             'name'          => 'Kepixel',
             'slug'          => 'kepixel',
             'version'       => $version,
-            'download_url'  => 'https://cdn.kepixel.com/wordpress/plugin.zip?v=' . $version,
+            'download_url'  => "https://github.com/Kepixel/wp/archive/refs/tags/v$version.zip",
             'requires'      => '6.0',
             'tested'        => '6.6.2',
             'requires_php'  => '7.4',
