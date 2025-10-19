@@ -22,7 +22,6 @@
                         name: e.ecommerce.item.item_name,
                         brand: e.ecommerce.item.item_name,
                         price: e.ecommerce.item.price,
-                        value: e.ecommerce.item.price,
                         quantity: 1,
                         currency: e.ecommerce.currency,
                         position: 1,
