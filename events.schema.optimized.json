@@ -845,6 +845,9 @@
                 "name": {
                     "type": "string"
                 },
+                "currency": {
+                    "type": "string"
+                },
                 "position": {
                     "type": "number"
                 },
