@@ -44,7 +44,6 @@
                         name: e.ecommerce.item.item_name,
                         brand: e.ecommerce.item.item_name,
                         price: e.ecommerce.item.price,
-                        value: e.ecommerce.item.price,
                         quantity: e.ecommerce.item.quantity,
                         position: 1,
                         url: window.location.href,
