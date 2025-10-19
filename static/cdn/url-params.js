@@ -135,11 +135,9 @@
     }
 
     function getParams() {
-        const searchParams = parseQuery(window.location.search || "");
-        if (Object.keys(searchParams).length) return searchParams;
-        const hash = window.location.hash || "";
-        const qIndex = hash.indexOf("?");
-        return qIndex === -1 ? {} : parseQuery(hash.slice(qIndex));
+        const search = parseQuery(window.location.search);
+        const hash = parseQuery(window.location.hash.split("?")[1] || "");
+        return {...hash, ...search};
     }
 
     function detectPlatform(p) {
@@ -208,7 +206,6 @@
 
     function ensureSnapchatCookies(params) {
         const scid = params.sc_click_id || params.snap_click_id || params.sccid || params.ScCid;
-        console.log(scid)
         if (scid) persistValue("_scclid", scid, 90);
         if (!getExistingValue("_scid")) {
             const ts = Math.floor(Date.now()/1000);
