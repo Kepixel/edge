@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Edge;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\ProcessMatomoRequest;
 use App\Jobs\ProcessRudderRequest;
 use Illuminate\Http\Request;
 
@@ -192,22 +191,22 @@ class EdgeAction extends Controller
 
         $propertiesSchema = $schema['properties'] ?? [];
 
-        foreach ($data as $key => $value) {
-            if (! array_key_exists($key, $propertiesSchema)) {
-                if (($schema['additionalProperties'] ?? true) === false) {
-                    $errors[] = sprintf('%s is not allowed', $this->contextPath($context, $key));
-                }
-
-                continue;
-            }
-
-            $propSchema = $propertiesSchema[$key];
-            $propContext = $this->contextPath($context, $key);
-            $errors = array_merge(
-                $errors,
-                $this->validateValueAgainstSchema($value, $propSchema, $definitions, $propContext)
-            );
-        }
+//        foreach ($data as $key => $value) {
+//            if (! array_key_exists($key, $propertiesSchema)) {
+//                if (($schema['additionalProperties'] ?? true) === false) {
+//                    $errors[] = sprintf('%s is not allowed', $this->contextPath($context, $key));
+//                }
+//
+//                continue;
+//            }
+//
+//            $propSchema = $propertiesSchema[$key];
+//            $propContext = $this->contextPath($context, $key);
+//            $errors = array_merge(
+//                $errors,
+//                $this->validateValueAgainstSchema($value, $propSchema, $definitions, $propContext)
+//            );
+//        }
 
         return $errors;
     }
