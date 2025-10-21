@@ -1,147 +1,138 @@
 (function () {
+    if (!window.dataLayer || !Array.isArray(window.dataLayer)) return
 
-    if (window.dataLayer && Array.isArray(window.dataLayer)) {
-        getUserProperties = function () {
-
-        }, processEvent = function (e) {
-            if (e.event === 'gtm.load') {
-                if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === 'function') {
-                    window.kepixelAnalytics.page();
-                } else {
-                    window.kepixelAnalytics = window.kepixelAnalytics || [];
-                    window.kepixelAnalytics.push(["page"]);
-                }
-            }
-            if (e.ecommerce != 'undefined') {
-                if (e.event == 'view_item') {
-                    let event = 'Product Viewed'
-                    let product = {
-                        product_id: e.ecommerce.item.item_id,
-                        sku: e.ecommerce.item.item_id,
-                        category: e.ecommerce.item.item_name,
-                        name: e.ecommerce.item.item_name,
-                        brand: e.ecommerce.item.item_name,
-                        price: e.ecommerce.item.price,
-                        quantity: 1,
-                        currency: e.ecommerce.currency,
-                        position: 1,
-                        url: window.location.href,
-                    };
-
-                    if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === "function") {
-                        window.kepixelAnalytics.track(event, product);
-                    } else {
-                        window.kepixelAnalytics = window.kepixelAnalytics || [];
-                        window.kepixelAnalytics.push(["track", event, product]);
-                    }
-                }
-                if (e.event === 'add_to_cart') {
-                    let event = 'Product Added'
-                    let product = {
-                        product_id: e.ecommerce.item.item_id,
-                        sku: e.ecommerce.item.item_id,
-                        category: e.ecommerce.item.item_name,
-                        name: e.ecommerce.item.item_name,
-                        brand: e.ecommerce.item.item_name,
-                        price: e.ecommerce.item.price,
-                        quantity: e.ecommerce.item.quantity,
-                        position: 1,
-                        url: window.location.href,
-                        currency: e.ecommerce.currency,
-                    }
-                    if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === "function") {
-                        window.kepixelAnalytics.track(event, product);
-                    } else {
-                        window.kepixelAnalytics = window.kepixelAnalytics || [];
-                        window.kepixelAnalytics.push(["track", event, product]);
-                    }
-                }
-                if (e.event === 'begin_checkout') {
-                    let event = 'Checkout Started'
-                    let data = {
-                        value: e.ecommerce.total_price,
-                        revenue: e.ecommerce.total_price,
-                        currency: e.ecommerce.item_currency ?? e.ecommerce.currency,
-                        products: e.ecommerce.items.map((item) => ({
-                            product_id: item.main_item_id,
-                            sku: item.main_item_id,
-                            name: item.item_name,
-                            price: item.total_price,
-                            quantity: item.qty,
-                            position: 1,
-                            category: item.group_name,
-                            image_url: item.item_image,
-                        })),
-                    }
-
-                    if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === "function") {
-                        window.kepixelAnalytics.track(event, data);
-                    } else {
-                        window.kepixelAnalytics = window.kepixelAnalytics || [];
-                        window.kepixelAnalytics.push(["track", event, data]);
-                    }
-                }
-                if (e.event === 'purchase') {
-                    let event = 'Order Completed'
-                    const calculatedTotal = Array.isArray(e.ecommerce.purchase.items)
-                        ? e.ecommerce.purchase.items.reduce((sum, item) => {
-                            const price = typeof item.total_price === 'number' ? item.total_price : parseFloat(item.total_price);
-                            return Number.isFinite(price) ? sum + price : sum;
-                        }, 0)
-                        : 0;
-                    const normalizedTotal = Math.round(calculatedTotal * 100) / 100;
-                    const path = window.location.pathname;
-                    const orderId = path.split("/order/")[1];
-
-                    let data = {
-                        checkout_id: orderId,
-                        order_id: orderId,
-                        total: normalizedTotal,
-                        subtotal: normalizedTotal,
-                        revenue: normalizedTotal,
-                        value: normalizedTotal,
-                        currency: e.ecommerce.item_currency ?? e.ecommerce.currency,
-                        products: e.ecommerce.purchase.items.map((item) => ({
-                            product_id: item.main_item_id,
-                            sku: item.main_item_id,
-                            name: item.item_name,
-                            price: item.total_price,
-                            quantity: item.qty,
-                            position: 1,
-                            category: item.group_name,
-                            image_url: item.item_image,
-                        })),
-                    }
-                    if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === "function") {
-                        window.kepixelAnalytics.track(event, data);
-                    } else {
-                        window.kepixelAnalytics = window.kepixelAnalytics || [];
-                        window.kepixelAnalytics.push(["track", event, data]);
-                    }
-                }
-            }
-        };
-        var e = !1, r = [];
-        setTimeout((function () {
-            processBacklog()
-        }), 2e3), checkAndProcessEvent = function (t) {
-            processEvent(t)
-        }, processBacklog = function () {
-            e = !0, r.forEach((function (e) {
-                processEvent(e)
-            })), r = []
-        }, window.dataLayer.forEach((function (e) {
-            checkAndProcessEvent(e)
-        }));
-        var t = window.dataLayer.push;
-        window.dataLayer.push = function () {
-            return Array.prototype.forEach.call(arguments, (function (e) {
-                try {
-                    checkAndProcessEvent(e)
-                } catch (r) {
-                    console.error("Error processing event:", r, "Event:", e)
-                }
-            })), t.apply(this, arguments)
+    const qa = () => {
+        window.kepixelAnalytics = window.kepixelAnalytics || []
+        const api = window.kepixelAnalytics
+        const call = (fn, ...args) => {
+            if (typeof api[fn] === 'function') api[fn](...args)
+            else api.push([fn, ...args])
+        }
+        return {
+            page: () => call('page'),
+            track: (event, payload) => call('track', event, payload),
         }
     }
-})();
+
+    const kx = qa()
+
+    const toNumber = v => {
+        if (typeof v === 'number' && Number.isFinite(v)) return v
+        const n = parseFloat(v)
+        return Number.isFinite(n) ? n : 0
+    }
+
+    const round2 = n => Math.round(n * 100) / 100
+
+    const toProduct = (item, idx) => ({
+        product_id: item?.item_id ?? item?.main_item_id ?? item?.id ?? '',
+        sku: item?.item_id ?? item?.main_item_id ?? '',
+        name: item?.item_name ?? item?.name ?? '',
+        category: item?.item_category ?? item?.group_name ?? '',
+        brand: item?.item_brand ?? item?.brand ?? '',
+        price: toNumber(item?.price ?? item?.total_price),
+        quantity: toNumber(item?.quantity ?? item?.qty ?? 1),
+        position: idx + 1,
+        image_url: item?.item_image ?? item?.image_url ?? '',
+        url: window.location.href,
+    })
+
+    const pickCurrency = ec => ec?.currency ?? ec?.item_currency ?? ''
+
+    const sumItems = items => round2((items || []).reduce((s, it) => s + toNumber(it?.total_price ?? it?.price) * toNumber(it?.quantity ?? it?.qty ?? 1), 0))
+
+    const getOrderId = ec => {
+        const fromEvent = ec?.purchase?.transaction_id ?? ec?.transaction_id
+        if (fromEvent) return fromEvent
+        const m = (window.location.pathname || '').match(/\/order\/([^/]+)/)
+        return m ? m[1] : ''
+    }
+
+    const handleEvent = e => {
+        if (!e || typeof e !== 'object') return
+
+        if (e.event === 'gtm.load') {
+            kx.page()
+            return
+        }
+
+        if (!(typeof e.ecommerce !== 'undefined' && e.ecommerce)) return
+        const ec = e.ecommerce
+
+        // view_item
+        if (e.event === 'view_item') {
+            const item = Array.isArray(ec.items) ? ec.items[0] : (ec.item || {})
+            const payload = toProduct(item, 0)
+            payload.currency = pickCurrency(ec)
+            kx.track('Product Viewed', payload)
+            return
+        }
+
+        // add_to_cart
+        if (e.event === 'add_to_cart') {
+            const item = Array.isArray(ec.items) ? ec.items[0] : (ec.item || {})
+            const payload = toProduct(item, 0)
+            payload.currency = pickCurrency(ec)
+            kx.track('Product Added', payload)
+            return
+        }
+
+        // begin_checkout
+        if (e.event === 'begin_checkout') {
+            const items = Array.isArray(ec.items) ? ec.items : []
+            const value = toNumber(ec.value ?? ec.total_price ?? sumItems(items))
+            const payload = {
+                value,
+                revenue: value,
+                currency: pickCurrency(ec),
+                products: items.map(toProduct),
+            }
+            kx.track('Checkout Started', payload)
+            return
+        }
+
+        // purchase
+        if (e.event === 'purchase') {
+            const items =
+                Array.isArray(ec.purchase?.items) ? ec.purchase.items :
+                    Array.isArray(ec.items) ? ec.items : []
+            const total = toNumber(
+                ec.value ??
+                ec.purchase?.value ??
+                ec.total_price ??
+                ec.purchase?.total_price ??
+                sumItems(items)
+            )
+            const orderId = getOrderId(ec)
+            const currency = pickCurrency(ec)
+            const payload = {
+                checkout_id: orderId,
+                order_id: orderId,
+                total: round2(total),
+                subtotal: round2(total),
+                revenue: round2(total),
+                value: round2(total),
+                currency,
+                products: items.map(toProduct),
+            }
+            kx.track('Order Completed', payload)
+            return
+        }
+    }
+
+    // process existing events
+    window.dataLayer.forEach(handleEvent)
+
+    // intercept future pushes
+    const originalPush = window.dataLayer.push
+    window.dataLayer.push = function () {
+        Array.prototype.forEach.call(arguments, ev => {
+            try {
+                handleEvent(ev)
+            } catch (err) {
+                console.error('kepixel handler error', err, ev)
+            }
+        })
+        return originalPush.apply(this, arguments)
+    }
+})()

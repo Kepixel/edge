@@ -53,6 +53,12 @@ class AnubisIndexController extends Controller
             $js .= PHP_EOL;
         }
 
+        if ($source->type === 'easy-orders') {
+            $easyOrdersJs = file_get_contents(base_path('static/cdn/easy-orders.js'));
+            $js .= $easyOrdersJs;
+            $js .= PHP_EOL;
+        }
+
         if ($source->type === 'tryorder') {
             $tryorderJs = file_get_contents(base_path('static/cdn/tryorder.js'));
             $js .= $tryorderJs;
