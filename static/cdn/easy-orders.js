@@ -16,13 +16,11 @@
 
     const kx = qa()
 
+    document.addEventListener('DOMContentLoaded', () => {
+        kx.page()
+    })
     const handleEvent = e => {
         if (!e || typeof e !== 'object') return
-
-        if (e.event === 'gtm.load') {
-            kx.page()
-            return
-        }
 
         console.log(e)
     }
