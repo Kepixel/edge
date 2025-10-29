@@ -26,7 +26,7 @@
         // 'Payment Info Entered',
         // 'Payment Failed',
         // 'Order Updated',
-        // 'Order Completed',
+        'Order Completed',
         // 'Order Refunded',
         // 'Order Cancelled',
         // 'Products Searched',
