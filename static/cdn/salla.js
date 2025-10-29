@@ -26,7 +26,7 @@
         // 'Payment Info Entered',
         // 'Payment Failed',
         // 'Order Updated',
-        'Order Completed',
+        // 'Order Completed',
         // 'Order Refunded',
         // 'Order Cancelled',
         // 'Products Searched',
@@ -252,7 +252,7 @@
             value: actionField.total,
             transaction_id: ecommerce.event_id,
             order_id: ecommerce.event_id,
-            items: products.map(function (item) {
+            products: products.map(function (item) {
                 return {
                     item_id: item.id,
                     item_name: item.name,
