@@ -20,7 +20,7 @@
         // 'Product Removed',
         'Cart Viewed',
         // 'Cart Updated',
-        // 'Checkout Started',
+        'Checkout Started',
         // 'Checkout Step Viewed',
         // 'Checkout Step Completed',
         // 'Payment Info Entered',
