@@ -99,7 +99,6 @@
                 }
                 break;
             case "track":
-                console.log(ev)
                 watchCustomer();
                 const kepixelEventName = zidToKepixelMap[ev.name];
                 if (!kepixelEventName) return;
@@ -121,7 +120,6 @@
     function handleDL(ev) {
         if (!ev) return;
         let name, props;
-        console.log(ev)
         if (ev.event) {
             name = ev.event;
             props = {...(ev.ecommerce || {})};
@@ -130,7 +128,6 @@
             name = ev[0];
             props = ev[1] || {};
         } else {
-            console.log('invalid event', ev);
             return;
         }
         if (name === 'event') {
