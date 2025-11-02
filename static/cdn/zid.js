@@ -126,7 +126,7 @@
             name = ev.event;
             props = {...(ev.ecommerce || {})};
             for (const k in ev) if (k !== "event" && k !== "ecommerce" && ev[k] != null) props[k] = ev[k];
-        } else if (Array.isArray(ev)) {
+        } else if (Array.isArray(ev) || Object.prototype.toString.call(ev) === '[object Arguments]') {
             name = ev[0];
             props = ev[1] || {};
         } else {
