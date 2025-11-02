@@ -133,6 +133,10 @@
             console.log('invalid event', ev);
             return;
         }
+        if (name === 'event') {
+            name = ev[1]
+            props = ev[2] || {};
+        }
         const t = mapType(name);
         if (!t) return;
         const payload = {type: t, name, properties: props};
