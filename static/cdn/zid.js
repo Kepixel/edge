@@ -130,6 +130,7 @@
             name = ev[0];
             props = ev[1] || {};
         } else {
+            console.log('invalid event', ev);
             return;
         }
         const t = mapType(name);
