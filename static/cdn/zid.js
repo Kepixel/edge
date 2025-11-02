@@ -121,6 +121,7 @@
     function handleDL(ev) {
         if (!ev) return;
         let name, props;
+        console.log(ev)
         if (ev.event) {
             name = ev.event;
             props = {...(ev.ecommerce || {})};
