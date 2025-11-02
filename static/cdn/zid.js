@@ -111,6 +111,10 @@
                     ev.properties.product_id = ev.properties.product_id || ev.properties.id || ev.properties['items'][0]?.id;
                     ev.properties.product = ev.properties['items'][0];
                 }
+                if (kepixelEventName === 'Cart Viewed') {
+                    ev.properties.cart_id = ev.properties.value;
+                    ev.properties.products = ev.properties['items'];
+                }
 
                 if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === "function") {
                     window.kepixelAnalytics.track(kepixelEventName, ev.properties);
