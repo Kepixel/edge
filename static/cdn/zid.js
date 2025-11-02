@@ -103,6 +103,11 @@
                 const kepixelEventName = zidToKepixelMap[ev.name];
                 if (!kepixelEventName) return;
 
+                if (kepixelEventName == 'Product Viewed') {
+                    ev.properties.product_id = ev.properties.product_id || ev.properties.id || ev.properties['items'][0]?.id;
+                    ev.properties.product = ev.properties['items'][0];
+                }
+
                 if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === "function") {
                     window.kepixelAnalytics.track(kepixelEventName, ev.properties);
                 } else {
