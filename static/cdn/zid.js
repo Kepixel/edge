@@ -45,33 +45,33 @@
     })[name];
 
     const zidToKepixelMap = {
-        add_payment_info: "Payment Info Entered",
-        add_shipping_info: "Checkout Step Completed",
+        // add_payment_info: "Payment Info Entered",
+        // add_shipping_info: "Checkout Step Completed",
         add_to_cart: "Product Added",
-        add_to_wishlist: "Product Added to Wishlist",
+        // add_to_wishlist: "Product Added to Wishlist",
         begin_checkout: "Checkout Started",
         close_convert_lead: "Order Completed",
-        close_unconvert_lead: "Order Cancelled",
-        disqualify_lead: "Order Cancelled",
-        generate_lead: "Order Updated",
+        // close_unconvert_lead: "Order Cancelled",
+        // disqualify_lead: "Order Cancelled",
+        // generate_lead: "Order Updated",
         purchase: "Order Completed",
-        qualify_lead: "Order Updated",
-        refund: "Order Refunded",
+        // qualify_lead: "Order Updated",
+        // refund: "Order Refunded",
         remove_from_cart: "Product Removed",
         search: "Products Searched",
         select_content: "Product Clicked",
         select_item: "Product Clicked",
         select_promotion: "Product Clicked",
-        share: "Product Shared",
+        // share: "Product Shared",
         view_cart: "Cart Viewed",
         view_item: "Product Viewed",
-        view_item_list: "Product List Viewed",
-        view_promotion: "Product List Filtered",
-        order_updated: "Order Updated",
+        // view_item_list: "Product List Viewed",
+        // view_promotion: "Product List Filtered",
+        // order_updated: "Order Updated",
         order_completed: "Order Completed",
-        order_refunded: "Order Refunded",
-        order_cancelled: "Order Cancelled",
-        product_clicked: "Product Clicked",
+        // order_refunded: "Order Refunded",
+        // order_cancelled: "Order Cancelled",
+        // product_clicked: "Product Clicked",
         product_viewed: "Product Viewed"
     };
 
@@ -103,7 +103,11 @@
                 const kepixelEventName = zidToKepixelMap[ev.name];
                 if (!kepixelEventName) return;
 
-                if (kepixelEventName == 'Product Viewed') {
+                if (kepixelEventName === 'Product Viewed') {
+                    ev.properties.product_id = ev.properties.product_id || ev.properties.id || ev.properties['items'][0]?.id;
+                    ev.properties.product = ev.properties['items'][0];
+                }
+                if (kepixelEventName === 'Product Added') {
                     ev.properties.product_id = ev.properties.product_id || ev.properties.id || ev.properties['items'][0]?.id;
                     ev.properties.product = ev.properties['items'][0];
                 }
