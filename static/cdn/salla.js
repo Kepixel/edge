@@ -383,6 +383,10 @@
         ensurePayloadDefaults(payload, updatedCurrency);
         trackEvent(eventData.event, payload, user);
 
+        if (eventData.event == 'Cart Viewed') {
+            trackEvent('Checkout Started', payload, user);
+        }
+
         return updatedCurrency;
     }
 
@@ -420,8 +424,6 @@
         if (eventData.event === 'detail') {
             handleDetail(eventData, user, currency || getCurrencyCookie());
         }
-
-        console.log(eventData.event)
     }
 
     const queuedEvents = [];
