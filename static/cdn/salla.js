@@ -420,6 +420,8 @@
         if (eventData.event === 'detail') {
             handleDetail(eventData, user, currency || getCurrencyCookie());
         }
+
+        console.log(eventData.event)
     }
 
     const queuedEvents = [];
