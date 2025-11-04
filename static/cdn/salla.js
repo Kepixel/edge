@@ -384,6 +384,7 @@
         trackEvent(eventData.event, payload, user);
 
         if (eventData.event == 'Cart Viewed') {
+            payload.order_id = payload.cart_id;
             trackEvent('Checkout Started', payload, user);
         }
 
