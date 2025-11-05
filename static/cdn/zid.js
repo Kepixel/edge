@@ -119,6 +119,10 @@
                     ev.properties.order_id = ev.properties.value;
                     ev.properties.products = ev.properties['items'];
                 }
+                if (kepixelEventName === 'Order Completed') {
+                    ev.properties.order_id = ev.properties.transaction_id;
+                    ev.properties.products = ev.properties['items'];
+                }
 
                 if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === "function") {
                     window.kepixelAnalytics.track(kepixelEventName, ev.properties);
