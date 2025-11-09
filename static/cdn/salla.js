@@ -412,6 +412,7 @@
         }
 
         if (eventData.event === 'purchase') {
+            console.log(eventData)
             handlePurchase(eventData, user, currency || getCurrencyCookie());
         }
         if (eventData.event === 'addToCart') {
