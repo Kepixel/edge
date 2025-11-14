@@ -83,32 +83,32 @@ class EventDeliveryStatusAction extends Controller
                     $payload = json_decode(json_encode($payload), true);
                 }
 
-//                app(Client::class)->insert(
-//                    'event_delivery_logs',
-//                    [
-//                        [
-//                            $destination->team_id,
-//                            $destination->id,
-//                            $sourceId,
-//                            $item['eventName'] ?? $item['eventType'] ?? 'unknown',
-//                            $item['eventType'] ?? 'track',
-//                            $status,
-//                            $item['attemptNum'] ?? 1,
-//                            $item['errorCode'] ?? null,
-//                            $item['errorResponse'] ?? null,
-//                            $item['payload']['endpoint'] ?? null,
-//                            $item['payload']['method'] ?? null,
-//                            $item['payload']['userId'] ?? null,
-//                            $item['payload']['anonymousId'] ?? null,
-//                            $item['payload']['messageId'] ?? null,
-//                            $item['payload']['rudderId'] ?? null,
-//                            json_encode($payload),
-//                            isset($item['sentAt']) ? \Carbon\Carbon::parse($item['sentAt'])->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s'),
-//                            now()->toDateTimeString(),
-//                        ],
-//                    ],
-//                    ['team_id', 'destination_id', 'source_id', 'event_name', 'event_type', 'status', 'attempt_number', 'error_code', 'error_response', 'endpoint', 'method', 'user_id', 'anonymous_id', 'message_id', 'rudder_id', 'payload', 'event_timestamp', 'created_at']
-//                );
+                app(Client::class)->insert(
+                    'event_delivery_logs',
+                    [
+                        [
+                            $destination->team_id,
+                            $destination->id,
+                            $sourceId,
+                            $item['eventName'] ?? $item['eventType'] ?? 'unknown',
+                            $item['eventType'] ?? 'track',
+                            $status,
+                            $item['attemptNum'] ?? 1,
+                            $item['errorCode'] ?? null,
+                            $item['errorResponse'] ?? null,
+                            $item['payload']['endpoint'] ?? null,
+                            $item['payload']['method'] ?? null,
+                            $item['payload']['userId'] ?? null,
+                            $item['payload']['anonymousId'] ?? null,
+                            $item['payload']['messageId'] ?? null,
+                            $item['payload']['rudderId'] ?? null,
+                            json_encode($payload),
+                            isset($item['sentAt']) ? \Carbon\Carbon::parse($item['sentAt'])->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s'),
+                            now()->toDateTimeString(),
+                        ],
+                    ],
+                    ['team_id', 'destination_id', 'source_id', 'event_name', 'event_type', 'status', 'attempt_number', 'error_code', 'error_response', 'endpoint', 'method', 'user_id', 'anonymous_id', 'message_id', 'rudder_id', 'payload', 'event_timestamp', 'created_at']
+                );
 
                 // Update destination's last delivery timestamp
                 $destination->update([

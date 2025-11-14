@@ -24,8 +24,6 @@ class SeedEventUploadLogJob implements ShouldQueue
      */
     public function handle(): void
     {
-        return;
-
         // Persist the event for reporting and debugging
         app(Client::class)->insert(
             'event_upload_logs',
