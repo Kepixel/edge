@@ -17,6 +17,7 @@
         "laravel/telescope": "^5.12",
         "laravel/tinker": "^2.10.1",
         "matthiasmullie/minify": "^1.3",
+        "sentry/sentry-laravel": "^4.19",
         "spiral/roadrunner-cli": "^2.6.0",
         "spiral/roadrunner-http": "^3.3.0"
     },
