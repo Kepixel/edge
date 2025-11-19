@@ -92,3 +92,20 @@
         _paq.__loaded = true;
     }
 })();
+
+
+(function() {
+    const scripts = [
+        'https://cdn.kepixel.com/3.21.0/modern/js-integrations/FacebookPixel.min.js',
+        'https://cdn.kepixel.com/3.21.0/modern/js-integrations/SnapPixel.min.js',
+        'https://cdn.kepixel.com/3.21.0/modern/js-integrations/GoogleTagManager.min.js',
+        'https://cdn.kepixel.com/3.21.0/modern/js-integrations/GA4.min.js'
+    ];
+
+    scripts.forEach(src => {
+        const s = document.createElement('script');
+        s.src = src;
+        s.async = true;
+        document.head.appendChild(s);
+    });
+})();
