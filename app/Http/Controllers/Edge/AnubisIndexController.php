@@ -27,13 +27,8 @@ class AnubisIndexController extends Controller
             return redirect('https://kepixel.com');
         }
 
-        $tagId = is_object($source) ? $source->tag_id : null;
-
         $configJs = 'window.kepixelSourceType = ' . json_encode($source->type) . ";\n";
         $configJs .= 'window.kepixelSourceKey = ' . json_encode($sourceKey) . ";\n";
-        if (!empty($tagId)) {
-            $configJs .= 'window.kepixelTagId = ' . json_encode($tagId) . ";\n";
-        }
 
         $eventValidator = file_get_contents(base_path('static/cdn/event-validator.js'));
         $urlParams = file_get_contents(base_path('static/cdn/url-params.js'));

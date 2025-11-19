@@ -51,7 +51,7 @@ class SourceConfigController extends Controller
                             'id' => $destination->id,
                             'name' => $destination->name,
                             'enabled' => true,
-                            'config'    => $destination->config,
+                            'config' => [...$destination->config, 'connectionMode' => 'hybrid'],
                             'destinationDefinitionId' => $configDestination['id'] ?? '',
                             'destinationDefinition' => [
                                 'name' => $configDestination['name'],
