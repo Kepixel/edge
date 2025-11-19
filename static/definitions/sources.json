@@ -1,0 +1,142 @@
+[
+    {
+        "id": "1b6gJdqOPOCadT3cddw8eidV591",
+        "name": "HTTP",
+        "displayName": "HTTP",
+        "category": "sdk",
+        "uiConfig": null,
+        "options": null,
+        "type": "cloud",
+        "slug": "http"
+    },
+    {
+        "id": "1ogo5AXQB6JnsHiqDXZ6jl5ZerJ",
+        "name": "Flutter",
+        "displayName": "Flutter",
+        "category": "mobile",
+        "uiConfig": null,
+        "options": {
+            "botEventManagement": true,
+            "sdkExecutionEnvironment": "client"
+        },
+        "type": "flutter",
+        "slug": "flutter"
+    },
+    {
+        "id": "1QGzOCoEznfENfRDG0gBuPlsdM4",
+        "name": "iOS",
+        "displayName": "iOS",
+        "category": "mobile",
+        "uiConfig": null,
+        "options": {
+            "sdkExecutionEnvironment": "client"
+        },
+        "type": "ios",
+        "slug": "ios"
+    },
+    {
+        "id": "01KA9C053647VN1ABCFDFM5GN7",
+        "name": "Android",
+        "displayName": "ANDROID",
+        "category": "mobile",
+        "uiConfig": null,
+        "options": {
+            "sdkExecutionEnvironment": "client"
+        },
+        "type": "android",
+        "slug": "android"
+    },
+    {
+        "id": "1TW48i2bIzEl1HPf825cEznfIM8",
+        "name": "Javascript",
+        "displayName": "JavaScript",
+        "category": "web",
+        "uiConfig": null,
+        "options": {
+            "botEventManagement": true,
+            "sdkExecutionEnvironment": "client"
+        },
+        "type": "web",
+        "slug": "javascript"
+    },
+    {
+        "id": "1TW48i2bIzEl1HPf825cEznfIM9",
+        "name": "wordpress",
+        "displayName": "WordPress",
+        "category": "web",
+        "uiConfig": null,
+        "options": {
+            "botEventManagement": true,
+            "sdkExecutionEnvironment": "client"
+        },
+        "type": "web",
+        "slug": "wordpress"
+    },
+    {
+        "id": "1TW48i2bIzEl1HPf825cEznfIX9",
+        "name": "tryorder",
+        "displayName": "TryOrder",
+        "category": "web",
+        "uiConfig": null,
+        "options": {
+            "botEventManagement": true,
+            "sdkExecutionEnvironment": "client"
+        },
+        "type": "web",
+        "slug": "tryorder"
+    },
+    {
+        "id": "1TW48i2bIzEl1HPf825cEznfIZ9",
+        "name": "salla",
+        "displayName": "Salla",
+        "category": "web",
+        "uiConfig": null,
+        "options": {
+            "botEventManagement": true,
+            "sdkExecutionEnvironment": "client"
+        },
+        "type": "web",
+        "slug": "salla",
+        "installation": "Copy this GTM container id and paste it in your GTM app in Salla dashboard"
+    },
+    {
+        "id": "01K5C0JVQN77C5BQ997TP6EM4F",
+        "name": "zid",
+        "displayName": "Zid",
+        "category": "web",
+        "uiConfig": null,
+        "options": {
+            "botEventManagement": true,
+            "sdkExecutionEnvironment": "client"
+        },
+        "type": "web",
+        "slug": "zid",
+        "installation": "Copy this GTM container id and paste it in your GTM app in zid dashboard"
+    },
+    {
+        "id": "01K5C0K3ZJG63KCEXKEJATXC0Y",
+        "name": "easy-orders",
+        "displayName": "EasyOrders",
+        "category": "web",
+        "uiConfig": null,
+        "options": {
+            "botEventManagement": true,
+            "sdkExecutionEnvironment": "client"
+        },
+        "type": "web",
+        "slug": "easy-orders",
+        "installation": "Copy this GTM container id and paste it in your GTM app in EasyOrders dashboard"
+    },
+    {
+        "id": "1acY4PznURHGvYZxzOI5VyRNTav",
+        "name": "ReactNative",
+        "displayName": "React Native",
+        "category": "mobile",
+        "uiConfig": null,
+        "options": {
+            "sdkExecutionEnvironment": "client"
+        },
+        "type": "reactnative",
+        "slug": "react-native"
+    }
+]

@@ -13,20 +13,26 @@ class AnubisIndexController extends Controller
     {
         $sourceKey = request()->query('appId', request()->query('writeKey'));
 
-        $source = Cache::remember('source_data_'.$sourceKey, 86400, function () use ($sourceKey) {
-            return Source::where('app_token', $sourceKey)->first(['id', 'app_token', 'tag_id', 'type']);
+        $source = Cache::remember('source_data_' . $sourceKey, 86400, function () use ($sourceKey) {
+            return Source::where('app_token', $sourceKey)->first(['id', 'app_token', 'tag_id', 'type',
+                'use_custom_gtm',
+                'own_gtm_container_id',
+                'use_custom_google_analytics',
+                'own_analytics_measurement_id',
+                'own_analytics_api_secret',
+            ]);
         });
 
-        if (! $source) {
+        if (!$source) {
             return redirect('https://kepixel.com');
         }
 
         $tagId = is_object($source) ? $source->tag_id : null;
 
-        $configJs = 'window.kepixelSourceType = '.json_encode($source->type).";\n";
-        $configJs .= 'window.kepixelSourceKey = '.json_encode($sourceKey).";\n";
-        if (! empty($tagId)) {
-            $configJs .= 'window.kepixelTagId = '.json_encode($tagId).";\n";
+        $configJs = 'window.kepixelSourceType = ' . json_encode($source->type) . ";\n";
+        $configJs .= 'window.kepixelSourceKey = ' . json_encode($sourceKey) . ";\n";
+        if (!empty($tagId)) {
+            $configJs .= 'window.kepixelTagId = ' . json_encode($tagId) . ";\n";
         }
 
         $eventValidator = file_get_contents(base_path('static/cdn/event-validator.js'));
@@ -38,7 +44,7 @@ class AnubisIndexController extends Controller
         $js .= PHP_EOL;
         $js .= $urlParams;
         $js .= PHP_EOL;
-        $js .= $configJs.$trackerContent;
+        $js .= $configJs . $trackerContent;
         $js .= PHP_EOL;
 
         if ($source->type === 'salla') {
