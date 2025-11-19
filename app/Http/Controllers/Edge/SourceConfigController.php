@@ -51,6 +51,7 @@ class SourceConfigController extends Controller
                             'id' => $destination->id,
                             'name' => $destination->name,
                             'enabled' => true,
+                            'config'    => $destination->config,
                             'destinationDefinitionId' => $configDestination['id'] ?? '',
                             'destinationDefinition' => [
                                 'name' => $configDestination['name'],
