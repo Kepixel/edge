@@ -395,7 +395,6 @@
         if (!eventData) {
             return;
         }
-        console.log(eventData)
 
         const user = getUserProperties();
         let currency = captureCurrencyFromEvent(eventData);
@@ -425,6 +424,8 @@
 
         if (eventData.event === 'detail') {
             handleDetail(eventData, user, currency || getCurrencyCookie());
+        } else {
+            console.log(eventData.event)
         }
     }
 
