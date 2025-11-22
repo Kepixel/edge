@@ -13,8 +13,9 @@ class AnubisIndexController extends Controller
     {
         $sourceKey = request()->query('appId', request()->query('writeKey'));
 
+        /** @var Source $source */
         $source = Cache::remember('source_data_' . $sourceKey, 86400, function () use ($sourceKey) {
-            return Source::where('app_token', $sourceKey)->first(['id', 'app_token', 'tag_id', 'type',
+            return Source::where('app_token', $sourceKey)->with('destinations')->first(['id', 'app_token', 'tag_id', 'type',
                 'use_custom_gtm',
                 'own_gtm_container_id',
                 'use_custom_google_analytics',
@@ -74,6 +75,13 @@ class AnubisIndexController extends Controller
             $js .= $wordpressJs;
             $js .= PHP_EOL;
         }
+
+        if ($sourceKey == '01KADKP3YX3BAW9GEG8XK1FVB7') {
+
+            dd($source->destinations);
+        }
+
+//        $ga = $source->destinations;
 
         $minifier = new Minify\JS;
         $minifier->add($js);
