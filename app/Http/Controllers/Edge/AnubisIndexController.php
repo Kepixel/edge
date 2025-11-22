@@ -79,13 +79,21 @@ class AnubisIndexController extends Controller
         if ($sourceKey == '01KADKP3YX3BAW9GEG8XK1FVB7') {
             $ga = $source->destinations->where('platform', 'gtm')->first();
             if ($ga) {
-                dd($ga, $ga->config);
+                dd($ga, $ga->config['containerID']);
             }
         }
 
-        if ($source->use_custom_gtm) {
-            // own_gtm_container_id
+        $gtIds = [];
+        $gts = $source->destinations->where('platform', 'gtm');
+        foreach ($gts as $gt) {
+            $gtIds[] = $gt->config['containerID'];
         }
+
+        if ($source->use_custom_gtm) {
+            $gtIds[] = $source->own_gtm_container_id;
+        }
+
+
 
         $gaIds = [];
         $gas = $source->destinations->where('platform', 'google-analytics-4');
