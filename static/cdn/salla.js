@@ -426,7 +426,7 @@
             handleDetail(eventData, user, currency || getCurrencyCookie());
         } else {
             if (eventData.event.name === 'detail') {
-                console.log(eventData)
+                console.log(eventData.ecommerce)
             }
         }
     }
