@@ -47,11 +47,14 @@ class SourceConfigController extends Controller
 //                    'destinations' => [],
                     'destinations' => $source->destinations->map(function (Destination $destination) use ($definitions) {
                         $configDestination = collect($definitions)->firstWhere('slug', $destination->platform);
+
+                        $config = $destination->config;
+                        $config['connectionMode'] = 'hybrid';
                         return [
                             'id' => $destination->id,
                             'name' => $destination->name,
                             'enabled' => true,
-                            'config' => ['connectionMode' => 'hybrid'],
+                            'config' => $config,
                             'destinationDefinitionId' => $configDestination['id'] ?? '',
                             'destinationDefinition' => [
                                 'name' => $configDestination['name'],
