@@ -21,13 +21,9 @@ class SourceConfigController extends Controller
             return redirect('https://kepixel.com');
         }
 
-        $definitions = base_path('static/definitions/destinations.json');
-
-        $definitions = json_decode(file_get_contents($definitions), true);
-
         $cacheKey = 'source_config_response_' . $sourceKey;
-        $response = Cache::remember($cacheKey, 3600, function () use ($sourceKey, $definitions) {
-            $source = Source::where('app_token', $sourceKey)->with('destinations')->first();
+        $response = Cache::remember($cacheKey, 3600, function () use ($sourceKey) {
+            $source = Source::where('app_token', $sourceKey)->first();
 
             $timestamp = now()->toIso8601String();
 
@@ -44,24 +40,7 @@ class SourceConfigController extends Controller
                     ],
                     'enabled' => true,
                     'workspaceId' => $source->team_id,
-//                    'destinations' => [],
-                    'destinations' => $source->destinations->map(function (Destination $destination) use ($definitions) {
-                        $configDestination = collect($definitions)->firstWhere('slug', $destination->platform);
-
-                        $config = $destination->config;
-                        $config['connectionMode'] = 'hybrid';
-                        return [
-                            'id' => $destination->id,
-                            'name' => $destination->name,
-                            'enabled' => true,
-                            'config' => $config,
-                            'destinationDefinitionId' => $configDestination['id'] ?? '',
-                            'destinationDefinition' => [
-                                'name' => $configDestination['name'],
-                                'displayName' => $configDestination['displayName'],
-                            ]
-                        ];
-                    }),
+                    'destinations' => [],
                     'updatedAt' => $timestamp,
                     'dataplanes' => (object)[],
                 ],
