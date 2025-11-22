@@ -425,9 +425,7 @@
         if (eventData.event === 'detail') {
             handleDetail(eventData, user, currency || getCurrencyCookie());
         } else {
-            if (eventData.event === 'Product Viewed') {
-                handleDetail(eventData, user, currency || getCurrencyCookie());
-            }
+            console.log(eventData)
         }
     }
 
