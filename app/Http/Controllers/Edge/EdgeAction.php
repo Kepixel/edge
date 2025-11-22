@@ -77,14 +77,14 @@ class EdgeAction extends Controller
                         ], 422);
                     }
 
-                    $validationErrors = $this->validateEventProperties($event, $properties);
-
-                    if (! empty($validationErrors)) {
-                        return response()->json([
-                            'ok' => false,
-                            'errors' => $validationErrors,
-                        ], 422);
-                    }
+//                    $validationErrors = $this->validateEventProperties($event, $properties);
+//
+//                    if (! empty($validationErrors)) {
+//                        return response()->json([
+//                            'ok' => false,
+//                            'errors' => $validationErrors,
+//                        ], 422);
+//                    }
                 }
 
                 ProcessRudderRequest::dispatch(\Str::beforeLast($decoded, ':'), $request->all(), $headers, $path);
