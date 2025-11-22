@@ -77,8 +77,8 @@ class AnubisIndexController extends Controller
         }
 
         if ($sourceKey == '01KADKP3YX3BAW9GEG8XK1FVB7') {
-
-            dd($source->destinations->where('platform', 'google-analytics-4'));
+            $ga = $source->destinations->where('platform', 'google-analytics-4')->first();
+            dd($ga);
         }
 
 //        $ga = $source->destinations;
