@@ -79,11 +79,43 @@ class AnubisIndexController extends Controller
         if ($sourceKey == '01KADKP3YX3BAW9GEG8XK1FVB7') {
             $ga = $source->destinations->where('platform', 'google-analytics-4')->first();
             if ($ga) {
-                dd($ga, $ga->config);
+                dd($ga, $ga->config['measurementId']);
             }
         }
 
-//        $ga = $source->destinations;
+        if ($source->use_custom_gtm) {
+            // own_gtm_container_id
+        }
+
+        $gaIds = [];
+        $gas = $source->destinations->where('platform', 'google-analytics-4');
+        foreach ($gas as $ga) {
+            $gaIds[] = $ga->config['measurementId'];
+        }
+
+        if ($source->use_custom_google_analytics) {
+            $gaIds[] = $source->own_analytics_measurement_id;
+        }
+
+        if (!empty($gaIds)) {
+            // Sanitize, trim, remove empties and duplicates
+            $gaIds = array_values(array_unique(array_filter(array_map(function ($v) {
+                $s = is_string($v) ? trim($v) : (is_null($v) ? '' : trim((string)$v));
+                return $s !== '' ? $s : null;
+            }, $gaIds))));
+
+            // Expose IDs to the GA loader so it can configure them on load
+            if (!empty($gaIds)) {
+                $gaGlobals = 'window.GA_MEASUREMENT_IDS = ' . json_encode($gaIds) . ';';
+                // Also set a primary (legacy) ID for compatibility
+                $gaGlobals .= 'window.GA_MEASUREMENT_ID = ' . json_encode($gaIds[0]) . ';';
+                $js .= $gaGlobals . PHP_EOL;
+            }
+
+            $ga4Js = file_get_contents(base_path('static/sdk/ga.js'));
+            $js .= $ga4Js;
+            $js .= PHP_EOL;
+        }
 
         $minifier = new Minify\JS;
         $minifier->add($js);
