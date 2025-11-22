@@ -76,13 +76,6 @@ class AnubisIndexController extends Controller
             $js .= PHP_EOL;
         }
 
-        if ($sourceKey == '01KADKP3YX3BAW9GEG8XK1FVB7') {
-            $ga = $source->destinations->where('platform', 'gtm')->first();
-            if ($ga) {
-                dd($ga, $ga->config['containerID']);
-            }
-        }
-
         $gtIds = [];
         $gts = $source->destinations->where('platform', 'gtm');
         foreach ($gts as $gt) {
