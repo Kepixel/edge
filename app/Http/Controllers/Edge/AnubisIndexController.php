@@ -76,12 +76,12 @@ class AnubisIndexController extends Controller
             $js .= PHP_EOL;
         }
 
-//        if ($sourceKey == '01KADKP3YX3BAW9GEG8XK1FVB7') {
-//            $ga = $source->destinations->where('platform', 'google-analytics-4')->first();
-//            if ($ga) {
-//                dd($ga, $ga->config['measurementId']);
-//            }
-//        }
+        if ($sourceKey == '01KADKP3YX3BAW9GEG8XK1FVB7') {
+            $ga = $source->destinations->where('platform', 'gtm')->first();
+            if ($ga) {
+                dd($ga, $ga->config);
+            }
+        }
 
         if ($source->use_custom_gtm) {
             // own_gtm_container_id
