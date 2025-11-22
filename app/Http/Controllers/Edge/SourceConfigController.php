@@ -44,22 +44,21 @@ class SourceConfigController extends Controller
                     ],
                     'enabled' => true,
                     'workspaceId' => $source->team_id,
-                    'destinations' => [],
-//                    'destinations' => $source->destinations->map(function (Destination $destination) use ($definitions) {
-//                        $configDestination = collect($definitions)->firstWhere('slug', $destination->platform);
-//
-//                        return [
-//                            'id' => $destination->id,
-//                            'name' => $destination->name,
-//                            'enabled' => true,
-//                            'config' => [...$destination->config, 'connectionMode' => 'hybrid'],
-//                            'destinationDefinitionId' => $configDestination['id'] ?? '',
-//                            'destinationDefinition' => [
-//                                'name' => $configDestination['name'],
-//                                'displayName' => $configDestination['displayName'],
-//                            ]
-//                        ];
-//                    }),
+//                    'destinations' => [],
+                    'destinations' => $source->destinations->map(function (Destination $destination) use ($definitions) {
+                        $configDestination = collect($definitions)->firstWhere('slug', $destination->platform);
+                        return [
+                            'id' => $destination->id,
+                            'name' => $destination->name,
+                            'enabled' => true,
+                            'config' => ['connectionMode' => 'hybrid'],
+                            'destinationDefinitionId' => $configDestination['id'] ?? '',
+                            'destinationDefinition' => [
+                                'name' => $configDestination['name'],
+                                'displayName' => $configDestination['displayName'],
+                            ]
+                        ];
+                    }),
                     'updatedAt' => $timestamp,
                     'dataplanes' => (object)[],
                 ],
