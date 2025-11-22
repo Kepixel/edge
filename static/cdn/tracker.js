@@ -60,7 +60,7 @@
                 }();
 
                 window.kepixelAnalyticsAddScript(
-                    'https://cdn.kepixel.com/kep.min.js?x=1.0.2',
+                    'https://cdn.kepixel.com/kep.min.js?x=1.0.3',
                     "data-kep-write-key",
                     window.kepixelSourceKey || ""
                 );
