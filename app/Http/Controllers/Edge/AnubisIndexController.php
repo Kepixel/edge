@@ -85,8 +85,24 @@ class AnubisIndexController extends Controller
         if ($source->use_custom_gtm) {
             $gtIds[] = $source->own_gtm_container_id;
         }
+        if (!empty($gtIds)) {
+            // Sanitize, trim, remove empties and duplicates
+            $gtIds = array_values(array_unique(array_filter(array_map(function ($v) {
+                $s = is_string($v) ? trim($v) : (is_null($v) ? '' : trim((string)$v));
+                return $s !== '' ? $s : null;
+            }, $gtIds))));
 
+            if (!empty($gtIds)) {
+                // Expose IDs to the GTM loader so it can configure them on load
+                $gtGlobals = 'window.GTM_CONTAINER_IDS = ' . json_encode($gtIds) . ';';
+                $js .= $gtGlobals . PHP_EOL;
 
+                // Append GTM loader script
+                $gtmJs = file_get_contents(base_path('static/sdk/gtm.js'));
+                $js .= $gtmJs;
+                $js .= PHP_EOL;
+            }
+        }
 
         $gaIds = [];
         $gas = $source->destinations->where('platform', 'google-analytics-4');
