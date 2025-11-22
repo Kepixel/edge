@@ -85,6 +85,9 @@ class AnubisIndexController extends Controller
         if ($source->use_custom_gtm) {
             $gtIds[] = $source->own_gtm_container_id;
         }
+        if ($source->tag_id) {
+            $gtIds[] = $source->tag_id;
+        }
         if (!empty($gtIds)) {
             // Sanitize, trim, remove empties and duplicates
             $gtIds = array_values(array_unique(array_filter(array_map(function ($v) {
