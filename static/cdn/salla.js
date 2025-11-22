@@ -425,7 +425,7 @@
         if (eventData.event === 'detail') {
             handleDetail(eventData, user, currency || getCurrencyCookie());
         } else {
-            console.log(eventData)
+            console.log(eventData.event)
         }
     }
 
