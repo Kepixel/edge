@@ -100,10 +100,21 @@
 
     const handleProductRemovedFromCart = (event) => {
         setUserTraits(event);
-        window.kepixelAnalytics.track('', {
 
+        kepixelAnalytics.track('Product Added', {
+            cart_id: event.data.cartLine.merchandise.id,
+            product_id: event.data.cartLine.merchandise.product.id,
+            sku: event.data.cartLine.merchandise.product.sku || event.data.cartLine.merchandise.product.id,
+            name: event.data.cartLine.merchandise.product.title,
+            brand: event.data.cartLine.merchandise.product.vendor,
+            price: event.data.cartLine.cost.totalAmount.amount,
+            currency: event.data.cartLine.cost.totalAmount.currencyCode,
+            quantity: event.data.cartLine.quantity,
+            position: 1,
+            coupon: 'SUMMER20',
+            url: event.data.cartLine.merchandise.product.url,
+            image_url: event.data.cartLine.merchandise.product.image.src
         });
-        console.log('product_removed_from_cart', event);
     };
 
     const handlePaymentInfoSubmitted = (event) => {
