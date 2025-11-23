@@ -40,20 +40,28 @@
             value: event.data.productVariant.price.amount,
             price: event.data.productVariant.price.amount,
             product_name: event.data.productVariant.product.title,
+            name: event.data.productVariant.product.title,
             product_id: event.data.productVariant.product.id,
             category: event.data.productVariant.product.type,
             brand: event.data.productVariant.product.vendor
         });
-
-        console.log('product_viewed', event);
     };
 
     const handleCollectionViewed = (event) => {
         setUserTraits(event);
-        window.kepixelAnalytics.track('', {
-
+        kepixelAnalytics.track('Product List Viewed', {
+            list_id: event.data.collection.id || 'default',
+            category: event.data.collection.title,
+            products: event.data.collection.productVariants.map(p => ({
+                product_id: p.id,
+                sku: p.sku || p.id,
+                name: p.title,
+                product_name: p.title,
+                currency: p.price.currencyCode,
+                value: p.price.amount,
+                price: p.price.amount,
+            }))
         });
-        console.log('collection_viewed', event);
     };
 
     const handleSearchSubmitted = (event) => {
