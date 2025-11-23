@@ -123,11 +123,13 @@
 
     const handlePaymentInfoSubmitted = (event) => {
         setUserTraits(event);
-
-        window.kepixelAnalytics.track('', {
-
+        kepixelAnalytics.track('Payment Info Entered', {
+            order_id: event.data.checkout.token,
+            currency: event.data.data.checkout && event.data.data.checkout.currencyCode,
+            value: event.data.data.checkout && event.data.data.checkout.totalPrice.amount,
+            step: 1,
+            step_name: 'Payment Information',
         });
-        console.log('payment_info_submitted', event);
     };
 
     const handleCheckoutStarted = (event) => {
