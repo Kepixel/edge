@@ -73,10 +73,21 @@
 
     const handleCartViewed = (event) => {
         setUserTraits(event);
-        window.kepixelAnalytics.track('', {
-
+        kepixelAnalytics.track('Cart Viewed', {
+            cart_id: event.data.cart.id,
+            currency: event.data.cost.totalAmount.currencyCode,
+            value: event.data.cost.totalAmount.amount,
+            items_count: event.data.lines.length,
+            products: event.data.collection.productVariants.map(p => ({
+                product_id: p.merchandise.product.id,
+                sku: p.merchandise.product.sku || p.merchandise.product.id,
+                name: p.merchandise.product.title,
+                brand: p.merchandise.product.vendor,
+                price: p.cost.totalAmount.amount,
+                currency: p.cost.totalAmount.currencyCode,
+                quantity: p.quantity,
+            })),
         });
-        console.log('cart_viewed', event);
     };
 
     const handleProductAddedToCart = (event) => {
