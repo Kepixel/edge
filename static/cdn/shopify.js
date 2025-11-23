@@ -106,7 +106,7 @@
             quantity: event.data.cartLine.quantity,
             position: 1,
             url: event.data.cartLine.merchandise.product.url,
-            image_url: event.data.cartLine.merchandise.product.image.src
+            image_url: event.data.cartLine.merchandise.product?.image?.src
         });
     };
 
