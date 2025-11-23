@@ -34,8 +34,8 @@ class SourceConfigController extends Controller
                     'writeKey' => $sourceKey,
                     'config' => [
                         'statsCollection' => [
-                            'errors' => ['enabled' => true],
-                            'metrics' => ['enabled' => true],
+                            'errors' => ['enabled' => false],
+                            'metrics' => ['enabled' => false],
                         ],
                     ],
                     'enabled' => true,
