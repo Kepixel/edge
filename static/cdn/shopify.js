@@ -66,10 +66,9 @@
 
     const handleSearchSubmitted = (event) => {
         setUserTraits(event);
-        window.kepixelAnalytics.track('', {
-
+        kepixelAnalytics.track("Products Searched", {
+            query: event.data.searchResult && event.data.searchResult.query,
         });
-        console.log('search_submitted', event);
     };
 
     const handleCartViewed = (event) => {
