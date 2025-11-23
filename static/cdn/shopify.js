@@ -127,6 +127,7 @@
 
     const handleCheckoutStarted = (event) => {
         setUserTraits(event);
+        console.log('userTraits', userTraits)
         window.kepixelAnalytics.track('', {
 
         });
