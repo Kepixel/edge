@@ -30,6 +30,7 @@
     const handlePageViewed = (event) => {
         setUserTraits(event);
         window.kepixelAnalytics.page();
+        console.log(event)
     };
 
     const handleProductViewed = (event) => {
