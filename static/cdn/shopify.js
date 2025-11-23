@@ -25,7 +25,6 @@
 
         window.kepixelAnalytics.alias(userTraits.userId);
         window.kepixelAnalytics.identify(userTraits.userId, userTraits);
-
     }, userTraits = {};
 
 
@@ -79,8 +78,8 @@
         setUserTraits(event);
         kepixelAnalytics.track('Cart Viewed', {
             cart_id: event.data.cart.id,
-            currency: event.data.cost.totalAmount.currencyCode,
-            value: event.data.cost.totalAmount.amount,
+            currency: event.data.cart.cost.totalAmount.currencyCode,
+            value: event.data.cart.cost.totalAmount.amount,
             items_count: event.data.lines.length,
             products: event.data.collection.productVariants.map(p => ({
                 product_id: p.merchandise.product.id,
@@ -96,15 +95,6 @@
 
     const handleProductAddedToCart = (event) => {
         setUserTraits(event);
-        window.kepixelAnalytics.track('', {
-
-        });
-        console.log('product_added_to_cart', event);
-    };
-
-    const handleProductRemovedFromCart = (event) => {
-        setUserTraits(event);
-
         kepixelAnalytics.track('Product Added', {
             cart_id: event.data.cartLine.merchandise.id,
             product_id: event.data.cartLine.merchandise.product.id,
@@ -118,6 +108,17 @@
             coupon: 'SUMMER20',
             url: event.data.cartLine.merchandise.product.url,
             image_url: event.data.cartLine.merchandise.product.image.src
+        });
+    };
+
+    const handleProductRemovedFromCart = (event) => {
+        setUserTraits(event);
+        kepixelAnalytics.track('Product Removed', {
+            product_id: 'P12345',
+            name: 'Wireless Headphones',
+            price: 99.99,
+            currency: 'USD',
+            quantity: 1
         });
     };
 
