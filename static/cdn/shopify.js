@@ -21,7 +21,11 @@
         let y = getField(e, "checkout.billingAddress.lastName"),
             _ = getField(e, "checkout.shippingAddress.lastName"), h = getField(e, "checkout.lastName"),
             v = getField(init, "data.customer.lastName");
-        userTraits.lastname = v || h || _ || y || "", e && e.checkout && addUserAddress(e.checkout.billingAddress, e.checkout.shippingAddress)
+        userTraits.lastname = v || h || _ || y || "", e && e.checkout && addUserAddress(e.checkout.billingAddress, e.checkout.shippingAddress);
+
+        window.kepixelAnalytics.alias(userTraits.userId);
+        window.kepixelAnalytics.identify(userTraits.userId, userTraits);
+
     }, userTraits = {};
 
 
