@@ -30,13 +30,19 @@
     const handlePageViewed = (event) => {
         setUserTraits(event);
         window.kepixelAnalytics.page();
-        console.log(event)
     };
 
     const handleProductViewed = (event) => {
         setUserTraits(event);
-        window.kepixelAnalytics.track('', {
-
+        window.kepixelAnalytics.track('Product Viewed', {
+            client_dedup_id: event.id,
+            currency: event.data.productVariant.price.currencyCode,
+            value: event.data.productVariant.price.amount,
+            price: event.data.productVariant.price.amount,
+            product_name: event.data.productVariant.product.title,
+            product_id: event.data.productVariant.product.id,
+            category: event.data.productVariant.product.type,
+            brand: event.data.productVariant.product.vendor
         });
 
         console.log('product_viewed', event);
