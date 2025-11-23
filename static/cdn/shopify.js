@@ -81,7 +81,7 @@
             currency: event.data.cart.cost.totalAmount.currencyCode,
             value: event.data.cart.cost.totalAmount.amount,
             items_count: event.data.cart.lines.length,
-            products: event.data.collection.productVariants.map(p => ({
+            products: event.data.cart.lines.map(p => ({
                 product_id: p.merchandise.product.id,
                 sku: p.merchandise.product.sku || p.merchandise.product.id,
                 name: p.merchandise.product.title,
