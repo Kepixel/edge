@@ -7,6 +7,8 @@
     scriptInjected: false,
     jsInitialized: false,
     configuredIds: {}, // map of id -> true
+    pendingEvents: [], // events queued before gtag is ready
+    ready: false
   };
 
   function normalizeIds(input) {
@@ -24,8 +26,10 @@
     for (var i = 0; i < arr.length; i++) {
       var id = (arr[i] || '').toString().trim();
       if (!id) continue;
-      // Basic sanity: GA4 IDs typically start with 'G-'
-      out.push(id);
+      // Basic sanity: GA4 IDs typically start with 'G-' or 'AW-' (for Google Ads) or 'DC-' (for Floodlight)
+      if (id.indexOf('G-') === 0 || id.indexOf('AW-') === 0 || id.indexOf('DC-') === 0) {
+        out.push(id);
+      }
     }
     return out;
   }
@@ -58,14 +62,37 @@
     if (state.scriptInjected) return;
     if (findExistingGtagScript()) {
       state.scriptInjected = true;
+      state.ready = true;
       return;
     }
     if (!idForSrc) return; // defer loading until we have at least one ID
     var gaScript = document.createElement('script');
     gaScript.async = true;
     gaScript.src = state.baseUrl + '?id=' + encodeURIComponent(idForSrc);
+
+    // Set up onload handler to mark as ready
+    gaScript.onload = function() {
+      state.ready = true;
+      flushPendingEvents();
+    };
+    gaScript.onerror = function() {
+      state.ready = false; // Mark as not ready on error
+    };
+
     (document.head || document.getElementsByTagName('head')[0] || document.documentElement).appendChild(gaScript);
     state.scriptInjected = true;
+  }
+
+  function flushPendingEvents() {
+    if (!state.ready || !state.pendingEvents.length) return;
+    while (state.pendingEvents.length > 0) {
+      var event = state.pendingEvents.shift();
+      try {
+        window.gtag.apply(window, event);
+      } catch (e) {
+        // Swallow to avoid breaking page
+      }
+    }
   }
 
   function unique(arr) {
@@ -105,13 +132,61 @@
     if (!ids.length) return;
     configureIds(ids);
   };
+
+  // Enhanced API methods
+  window.kepGA.event = function(eventName, eventParams) {
+    if (!eventName) return;
+    var args = ['event', eventName];
+    if (eventParams) args.push(eventParams);
+
+    if (state.ready && window.gtag) {
+      // gtag is ready, send immediately
+      try {
+        window.gtag.apply(window, args);
+      } catch (e) {
+        // Swallow to avoid breaking page
+      }
+    } else {
+      // Queue for later
+      state.pendingEvents.push(args);
+    }
+  };
+
+  window.kepGA.set = function(targetId, config) {
+    var args = ['set', targetId, config];
+    if (state.ready && window.gtag) {
+      try {
+        window.gtag.apply(window, args);
+      } catch (e) {
+        // Swallow to avoid breaking page
+      }
+    } else {
+      state.pendingEvents.push(args);
+    }
+  };
+
+  window.kepGA.consent = function(consentArg, consentParams) {
+    var args = ['consent', consentArg, consentParams];
+    if (state.ready && window.gtag) {
+      try {
+        window.gtag.apply(window, args);
+      } catch (e) {
+        // Swallow to avoid breaking page
+      }
+    } else {
+      state.pendingEvents.push(args);
+    }
+  };
+
   window.kepGA.isInitialized = function () { return !!state.jsInitialized; };
   window.kepGA.isScriptInjected = function () { return !!state.scriptInjected || !!findExistingGtagScript(); };
+  window.kepGA.isReady = function () { return !!state.ready; };
   window.kepGA.configuredIds = function () {
     var list = [];
     for (var k in state.configuredIds) if (state.configuredIds.hasOwnProperty(k)) list.push(k);
     return list;
   };
+  window.kepGA.getPendingEventsCount = function() { return state.pendingEvents.length; };
 
   // Collect IDs from globals (legacy behavior) and configure them.
   // Supports: GA_MEASUREMENT_ID (string) and GA_MEASUREMENT_IDS (array or comma-separated string)

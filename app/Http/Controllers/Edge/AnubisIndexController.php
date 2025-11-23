@@ -49,6 +49,12 @@ class AnubisIndexController extends Controller
             $js .= PHP_EOL;
         }
 
+        if ($source->type === 'shopify') {
+            $shopifyJs = file_get_contents(base_path('static/cdn/shopify.js'));
+            $js .= $shopifyJs;
+            $js .= PHP_EOL;
+        }
+
         if ($source->type === 'zid') {
             $zidJs = file_get_contents(base_path('static/cdn/zid.js'));
             $js .= $zidJs;
