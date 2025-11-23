@@ -134,10 +134,66 @@
 
     const handleCheckoutStarted = (event) => {
         setUserTraits(event);
-        window.kepixelAnalytics.track('', {
+        const checkout = shopifyEvent.data.checkout;
 
+        // Map products from line items
+        const products = checkout.lineItems.map(item => ({
+            product_id: item.variant.product.id,
+            sku: item.variant.sku || null,
+            name: item.title,
+            brand: item.variant.product.vendor,
+            price: item.variant.price.amount,
+            currency: item.variant.price.currencyCode,
+            category: item.variant.product.type || null,
+            variant: item.variant.title || null,
+            quantity: item.quantity,
+            coupon: item.discountAllocations.length > 0 ? item.discountAllocations[0].discountApplication?.title : null
+        }));
+
+        // Extract discount/coupon info
+        const discount = checkout.discountsAmount.amount;
+        const coupon = checkout.discountApplications.length > 0
+            ? checkout.discountApplications[0].title
+            : null;
+
+        // Extract shipping method
+        const shippingMethod = checkout.delivery?.selectedDeliveryOptions?.[0]?.title || null;
+
+        // Build the Kepixel event
+        kepixelAnalytics.track('Checkout Started', {
+            order_id: checkout.token,
+            affiliation: checkout.localization.market.handle,
+            value: checkout.totalPrice.amount,
+            revenue: checkout.subtotalPrice.amount,
+            shipping: checkout.shippingLine.price.amount,
+            tax: checkout.totalTax.amount,
+            discount: discount,
+            coupon: coupon,
+            currency: checkout.currencyCode,
+            products: products,
+            payment_method: null,
+            shipping_method: shippingMethod,
+            shipping_address: checkout.shippingAddress ? {
+                name: `${checkout.shippingAddress.firstName} ${checkout.shippingAddress.lastName}`,
+                street: checkout.shippingAddress.address1,
+                street2: checkout.shippingAddress.address2,
+                city: checkout.shippingAddress.city,
+                state: checkout.shippingAddress.province,
+                postal_code: checkout.shippingAddress.zip,
+                country: checkout.shippingAddress.country
+            } : null,
+            billing_address: checkout.billingAddress ? {
+                name: `${checkout.billingAddress.firstName} ${checkout.billingAddress.lastName}`,
+                street: checkout.billingAddress.address1,
+                street2: checkout.billingAddress.address2,
+                city: checkout.billingAddress.city,
+                state: checkout.billingAddress.province,
+                postal_code: checkout.billingAddress.zip,
+                country: checkout.billingAddress.country
+            } : null,
+            email: checkout.email,
+            phone: checkout.phone
         });
-        console.log('checkout_started', event);
     };
 
     const handleCheckoutCompleted = (event) => {
