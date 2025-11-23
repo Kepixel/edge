@@ -105,7 +105,6 @@
             currency: event.data.cartLine.cost.totalAmount.currencyCode,
             quantity: event.data.cartLine.quantity,
             position: 1,
-            coupon: 'SUMMER20',
             url: event.data.cartLine.merchandise.product.url,
             image_url: event.data.cartLine.merchandise.product.image.src
         });
@@ -114,11 +113,11 @@
     const handleProductRemovedFromCart = (event) => {
         setUserTraits(event);
         kepixelAnalytics.track('Product Removed', {
-            product_id: 'P12345',
-            name: 'Wireless Headphones',
-            price: 99.99,
-            currency: 'USD',
-            quantity: 1
+            product_id: event.data.cartLine.merchandise.product.id,
+            name: event.data.cartLine.merchandise.product.title,
+            price: event.data.cartLine.cost.totalAmount.amount,
+            currency: event.data.cartLine.cost.totalAmount.currencyCode,
+            quantity: event.data.cartLine.quantity
         });
     };
 
