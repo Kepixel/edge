@@ -80,7 +80,7 @@
             cart_id: event.data.cart.id,
             currency: event.data.cart.cost.totalAmount.currencyCode,
             value: event.data.cart.cost.totalAmount.amount,
-            items_count: event.data.lines.length,
+            items_count: event.data.cart.lines.length,
             products: event.data.collection.productVariants.map(p => ({
                 product_id: p.merchandise.product.id,
                 sku: p.merchandise.product.sku || p.merchandise.product.id,
@@ -123,7 +123,6 @@
 
     const handlePaymentInfoSubmitted = (event) => {
         setUserTraits(event);
-        console.log('userTraits', userTraits)
 
         window.kepixelAnalytics.track('', {
 
@@ -133,7 +132,6 @@
 
     const handleCheckoutStarted = (event) => {
         setUserTraits(event);
-        console.log('userTraits', userTraits)
         window.kepixelAnalytics.track('', {
 
         });
@@ -142,8 +140,6 @@
 
     const handleCheckoutCompleted = (event) => {
         setUserTraits(event);
-        console.log('userTraits', userTraits)
-
         window.kepixelAnalytics.track('', {
 
         });
