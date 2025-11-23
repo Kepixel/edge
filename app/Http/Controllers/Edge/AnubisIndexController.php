@@ -79,7 +79,7 @@ class AnubisIndexController extends Controller
         $gtIds = [];
         $gts = $source->destinations->where('platform', 'gtm');
         foreach ($gts as $gt) {
-            $gtIds[] = $gt->config['containerID'];
+            $gtIds[] = $gt->config['containerID'] ?? $gt->config['container_id'];
         }
 
         if ($source->use_custom_gtm) {
@@ -110,7 +110,7 @@ class AnubisIndexController extends Controller
         $gaIds = [];
         $gas = $source->destinations->where('platform', 'google-analytics-4');
         foreach ($gas as $ga) {
-            $gaIds[] = $ga->config['measurementId'];
+            $gaIds[] = $ga->config['measurementId'] ?? $ga->config['measurementId'];
         }
 
         if ($source->use_custom_google_analytics) {
