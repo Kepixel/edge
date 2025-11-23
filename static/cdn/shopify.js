@@ -119,6 +119,8 @@
 
     const handlePaymentInfoSubmitted = (event) => {
         setUserTraits(event);
+        console.log('userTraits', userTraits)
+
         window.kepixelAnalytics.track('', {
 
         });
@@ -136,6 +138,8 @@
 
     const handleCheckoutCompleted = (event) => {
         setUserTraits(event);
+        console.log('userTraits', userTraits)
+
         window.kepixelAnalytics.track('', {
 
         });
