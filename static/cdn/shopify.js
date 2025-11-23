@@ -134,7 +134,7 @@
 
     const handleCheckoutStarted = (event) => {
         setUserTraits(event);
-        const checkout = shopifyEvent.data.checkout;
+        const checkout = event.data.checkout;
 
         // Map products from line items
         const products = checkout.lineItems.map(item => ({
@@ -198,7 +198,7 @@
 
     const handleCheckoutCompleted = (event) => {
         setUserTraits(event);
-        const checkout = shopifyEvent.data.checkout;
+        const checkout = event.data.checkout;
 
         // Map products from line items
         const products = checkout.lineItems.map(item => ({
