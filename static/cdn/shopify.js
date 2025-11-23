@@ -1,5 +1,6 @@
 (function() {
     const handlePageViewed = (event) => {
+        console.log('kkk', window.kepixelAnalytics)
         console.log('page_viewed', event);
     };
 
