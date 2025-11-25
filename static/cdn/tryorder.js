@@ -135,4 +135,37 @@
         })
         return originalPush.apply(this, arguments)
     }
-})()
+})();
+
+(function(history){
+    const pushState = history.pushState;
+    const replaceState = history.replaceState;
+
+    history.pushState = function() {
+        pushState.apply(history, arguments);
+        window.dispatchEvent(new Event('urlchange'));
+    };
+
+    history.replaceState = function() {
+        replaceState.apply(history, arguments);
+        window.dispatchEvent(new Event('urlchange'));
+    };
+})(window.history);
+
+
+// fire on load
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Page loaded:', window.location.href);
+});
+
+
+// fire on URL change
+window.addEventListener('urlchange', () => {
+    console.log('URL changed:', window.location.href);
+});
+
+
+// also handle back/forward
+window.addEventListener('popstate', () => {
+    console.log('URL changed:', window.location.href);
+});
