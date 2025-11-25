@@ -137,35 +137,25 @@
     }
 })();
 
-(function(history){
-    const pushState = history.pushState;
-    const replaceState = history.replaceState;
-
-    history.pushState = function() {
-        pushState.apply(history, arguments);
-        window.dispatchEvent(new Event('urlchange'));
-    };
-
-    history.replaceState = function() {
-        replaceState.apply(history, arguments);
-        window.dispatchEvent(new Event('urlchange'));
-    };
-})(window.history);
-
-
-// fire on load
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('Page loaded:', window.location.href);
-});
-
-
-// fire on URL change
-window.addEventListener('urlchange', () => {
-    window.kepixelAnalytics.page();
-});
-
-
-// also handle back/forward
-// window.addEventListener('popstate', () => {
-//     console.log('URL changed:', window.location.href);
+// (function(history){
+//     const pushState = history.pushState;
+//     const replaceState = history.replaceState;
+//
+//     history.pushState = function() {
+//         pushState.apply(history, arguments);
+//         window.dispatchEvent(new Event('urlchange'));
+//     };
+//
+//     history.replaceState = function() {
+//         replaceState.apply(history, arguments);
+//         window.dispatchEvent(new Event('urlchange'));
+//     };
+// })(window.history);
+//
+// window.addEventListener('load', () => {
+//     window.kepixelAnalytics.page();
+// });
+//
+// window.addEventListener('urlchange', () => {
+//     window.kepixelAnalytics.page();
 // });
