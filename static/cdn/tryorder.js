@@ -51,10 +51,10 @@
     const handleEvent = e => {
         if (!e || typeof e !== 'object') return
 
-        if (e.event === 'gtm.load') {
-            kx.page()
-            return
-        }
+        // if (e.event === 'gtm.load') {
+        //     kx.page()
+        //     return
+        // }
 
         if (!(typeof e.ecommerce !== 'undefined' && e.ecommerce)) return
         const ec = e.ecommerce
@@ -137,25 +137,25 @@
     }
 })();
 
-// (function(history){
-//     const pushState = history.pushState;
-//     const replaceState = history.replaceState;
-//
-//     history.pushState = function() {
-//         pushState.apply(history, arguments);
-//         window.dispatchEvent(new Event('urlchange'));
-//     };
-//
-//     history.replaceState = function() {
-//         replaceState.apply(history, arguments);
-//         window.dispatchEvent(new Event('urlchange'));
-//     };
-// })(window.history);
-//
-// window.addEventListener('load', () => {
-//     window.kepixelAnalytics.page();
-// });
-//
-// window.addEventListener('urlchange', () => {
-//     window.kepixelAnalytics.page();
-// });
+(function(history){
+    const pushState = history.pushState;
+    const replaceState = history.replaceState;
+
+    history.pushState = function() {
+        pushState.apply(history, arguments);
+        window.dispatchEvent(new Event('urlchange'));
+    };
+
+    // history.replaceState = function() {
+    //     replaceState.apply(history, arguments);
+    //     window.dispatchEvent(new Event('urlchange'));
+    // };
+})(window.history);
+
+window.addEventListener('load', () => {
+    window.kepixelAnalytics.page();
+});
+
+window.addEventListener('urlchange', () => {
+    window.kepixelAnalytics.page();
+});
