@@ -161,11 +161,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // fire on URL change
 window.addEventListener('urlchange', () => {
-    console.log('URL changed:', window.location.href);
+    window.kepixelAnalytics.page();
 });
 
 
 // also handle back/forward
-window.addEventListener('popstate', () => {
-    console.log('URL changed:', window.location.href);
-});
+// window.addEventListener('popstate', () => {
+//     console.log('URL changed:', window.location.href);
+// });
