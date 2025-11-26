@@ -254,9 +254,10 @@
             order_id: ecommerce.event_id,
             products: products.map(function (item) {
                 return {
-                    item_id: item.id,
-                    item_name: item.name,
-                    item_category: item.category,
+                    product_id: item.id,
+                    product_name: item.name,
+                    name: item.name,
+                    category: item.category,
                     quantity: item.quantity,
                     price: item.price,
                     discount: item.discount
