@@ -144,6 +144,7 @@ class EventDeliveryStatusAction extends Controller
             }
         }
 
+        // todo: batch update last_delivery_at timestamps
         // Batch update all destination last_delivery_at timestamps
 //        foreach ($destinationUpdates as $destinationId => $lastDeliveryAt) {
 //            Destination::where('id', $destinationId)->update(['last_delivery_at' => $lastDeliveryAt]);
