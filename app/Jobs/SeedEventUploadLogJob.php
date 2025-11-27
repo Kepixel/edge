@@ -47,13 +47,14 @@ class SeedEventUploadLogJob implements ShouldQueue
                     $this->data['userId'] ?? null,
                     $this->data['anonymousId'] ?? null,
                     $this->data['messageId'] ?? null,
+                    $this->data['context']['sessionId'] ?? null,
                     $this->data['rudderId'] ?? null,
                     json_encode($this->data),
                     isset($item['sentAt']) ? Carbon::parse($item['sentAt'])->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s'),
                     now()->toDateTimeString(),
                 ],
             ],
-            ['team_id', 'source_id', 'event_name', 'event_type', 'user_id', 'anonymous_id', 'message_id', 'rudder_id', 'properties', 'event_timestamp', 'created_at']
+            ['team_id', 'source_id', 'event_name', 'event_type', 'user_id', 'anonymous_id', 'message_id', 'rudder_id', 'session_id', 'properties', 'event_timestamp', 'created_at']
         );
 
         // Update source's last upload timestamp
