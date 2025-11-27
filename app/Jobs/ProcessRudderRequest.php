@@ -119,7 +119,8 @@ class ProcessRudderRequest implements ShouldQueue
 
                     $this->data['context']['campaign'] = $campaign;
 
-                    dd($pageContext, $pageProperties, $campaign);
+                    $contextPage = $this->data['context']['page'];
+                    dd($contextPage, $pageContext, $pageProperties, $campaign);
                 }
             }
         }
