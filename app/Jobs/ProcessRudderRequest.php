@@ -97,7 +97,7 @@ class ProcessRudderRequest implements ShouldQueue
     WHERE session_id = :sessionId
       AND anonymous_id = :anonymousId
       AND event_name = :eventName
-    ORDER BY event_timestamp DESC
+    ORDER BY event_timestamp ASC
     LIMIT 1
     ',
                 [
@@ -116,6 +116,8 @@ class ProcessRudderRequest implements ShouldQueue
                     $pageContext = $oldProperties['context'];
                     $campaign = $pageContext['campaign'];
                     $pageContext = $pageContext['page'];
+
+                    $this->data['context']['campaign'] = $campaign;
 
                     dd($pageContext, $pageProperties, $campaign);
                 }
