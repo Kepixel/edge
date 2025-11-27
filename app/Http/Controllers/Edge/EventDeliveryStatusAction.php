@@ -135,7 +135,9 @@ class EventDeliveryStatusAction extends Controller
                 );
 
                 // Track destination update for batch processing
-                $lastDeliveryAt = $item['sentAt'] ?? now();
+                $lastDeliveryAt = isset($item['sentAt'])
+                    ? \Carbon\Carbon::parse($item['sentAt'])
+                    : now();
                 if (! isset($destinationUpdates[$destination->id]) || $lastDeliveryAt > $destinationUpdates[$destination->id]) {
                     $destinationUpdates[$destination->id] = $lastDeliveryAt;
                 }
