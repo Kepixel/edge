@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\Destination;
 use Carbon\Carbon;
 use ClickHouseDB\Client;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -81,6 +82,8 @@ class SeedEventDeliveryLogJob implements ShouldQueue
             ],
             ['team_id', 'destination_id', 'source_id', 'event_name', 'event_type', 'status', 'attempt_number', 'error_code', 'error_response', 'endpoint', 'method', 'user_id', 'anonymous_id', 'message_id', 'rudder_id', 'payload', 'event_timestamp', 'created_at']
         );
+
+        Destination::where('id', $this->destinationId)->update(['last_delivery_at' => now()]);
     }
 
     /**
