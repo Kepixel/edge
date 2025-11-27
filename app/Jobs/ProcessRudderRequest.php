@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Source;
 use App\Services\TeamEventUsageService;
+use ClickHouseDB\Client;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -81,6 +82,60 @@ class ProcessRudderRequest implements ShouldQueue
             Log::emergency('Team not found for source: '.$source->id);
             return;
         }
+
+
+
+
+        $sessionId   = (string) ($this->data['context']['sessionId'] ?? null);
+        $anonymousId = (string) ($this->data['anonymousId'] ?? null);
+
+        $client = app(Client::class);
+
+        $row = $client->select(
+            '
+    SELECT *
+    FROM event_upload_logs
+    WHERE session_id = :sessionId
+      AND anonymous_id = :anonymousId
+      AND event_name = :eventName
+    ORDER BY event_timestamp DESC
+    LIMIT 1
+    ',
+            [
+                'sessionId'   => $sessionId,
+                'anonymousId' => $anonymousId,
+                'eventName'   => 'page',
+            ]
+        )->fetchOne();
+
+
+        if ($row) {
+            if ($source->id == '019abff1-c1cc-7093-855c-283381814baf') {
+                dd($row);
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //        $usageService = app(TeamEventUsageService::class);
 //        $currentMonth = now()->startOfMonth();
