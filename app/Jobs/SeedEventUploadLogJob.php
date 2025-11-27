@@ -4,12 +4,23 @@ namespace App\Jobs;
 
 use Carbon\Carbon;
 use ClickHouseDB\Client;
+use ClickHouseDB\Exception\QueryException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
 class SeedEventUploadLogJob implements ShouldQueue
 {
     use Queueable;
+
+    /**
+     * The number of times the job may be attempted.
+     */
+    public int $tries = 5;
+
+    /**
+     * The number of seconds to wait before retrying the job.
+     */
+    public array $backoff = [5, 15, 30, 60, 120];
 
     /**
      * Create a new job instance.
@@ -49,5 +60,13 @@ class SeedEventUploadLogJob implements ShouldQueue
         $this->source->update([
             'last_upload_at' => $item['sentAt'] ?? now(),
         ]);
+    }
+
+    /**
+     * Determine if the job should retry on the given exception.
+     */
+    public function retryUntil(): \DateTime
+    {
+        return now()->addMinutes(10);
     }
 }
