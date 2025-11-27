@@ -54,7 +54,7 @@ class SeedEventUploadLogJob implements ShouldQueue
                     now()->toDateTimeString(),
                 ],
             ],
-            ['team_id', 'source_id', 'event_name', 'event_type', 'user_id', 'anonymous_id', 'message_id', 'rudder_id', 'session_id', 'properties', 'event_timestamp', 'created_at']
+            ['team_id', 'source_id', 'event_name', 'event_type', 'user_id', 'anonymous_id', 'message_id', 'session_id', 'rudder_id', 'properties', 'event_timestamp', 'created_at']
         );
 
         // Update source's last upload timestamp
