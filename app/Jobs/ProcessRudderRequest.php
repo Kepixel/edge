@@ -110,7 +110,9 @@ class ProcessRudderRequest implements ShouldQueue
 
             if ($row) {
                 if ($source->id == '019abff1-c1cc-7093-855c-283381814baf') {
-                    dd($row, $this->data);
+                    $oldProperties = $row['properties'];
+                    $oldProperties = json_decode($oldProperties, true);
+                    dd($oldProperties, $this->data);
                 }
             }
         }
