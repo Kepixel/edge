@@ -71,22 +71,22 @@ class ProcessRudderRequest implements ShouldQueue
     public function handle(): void
     {
         $source = Source::where('app_token', $this->sourceKey)->with('team')->first();
-        if (! $source) {
-            Log::emergency('Source not found for token: '.$this->sourceKey);
+        if (!$source) {
+            Log::emergency('Source not found for token: ' . $this->sourceKey);
             return;
         }
 
         $team = $source->team;
 
-        if (! $team) {
-            Log::emergency('Team not found for source: '.$source->id);
+        if (!$team) {
+            Log::emergency('Team not found for source: ' . $source->id);
             return;
         }
 
 
         if ($this->isTrackEvent($this->path)) {
-            $sessionId   = (string) ($this->data['context']['sessionId'] ?? null);
-            $anonymousId = (string) ($this->data['anonymousId'] ?? null);
+            $sessionId = (string)($this->data['context']['sessionId'] ?? null);
+            $anonymousId = (string)($this->data['anonymousId'] ?? null);
 
             $client = app(Client::class);
 
@@ -101,37 +101,42 @@ class ProcessRudderRequest implements ShouldQueue
     LIMIT 1
     ',
                 [
-                    'sessionId'   => $sessionId,
+                    'sessionId' => $sessionId,
                     'anonymousId' => $anonymousId,
-                    'eventName'   => 'page',
+                    'eventName' => 'page',
                 ]
             )->fetchOne();
 
 
             if ($row) {
-                if ($source->id == '019abff1-c1cc-7093-855c-283381814baf') {
-                    $oldProperties = $row['properties'];
-                    $oldProperties = json_decode($oldProperties, true);
-                    $pageProperties = $oldProperties['properties'];
-                    $pageContext = $oldProperties['context'];
-                    $campaign = $pageContext['campaign'];
-                    $pageContext = $pageContext['page'];
+                $oldProperties = $row['properties'];
+                $oldProperties = json_decode($oldProperties, true);
+                $firstPageView = $oldProperties['properties'];
 
-                    $this->data['context']['campaign'] = $campaign;
-
-                    $contextPage = $this->data['context']['page'];
+                $this->data["referrer"] = $firstPageView["referrer"] ?? null;
+                $this->data["referring_domain"] = $firstPageView["referring_domain"] ?? null;
+                $this->data["initial_referrer"] = $firstPageView["initial_referrer"] ?? null;
+                $this->data["initial_referring_domain"] = $firstPageView["initial_referring_domain"] ?? null;
 
 
+                $this->data['context']['campaign'] = $oldProperties['context']['campaign'];
 
-                    dd($contextPage, $pageContext, $pageProperties, $campaign);
-                }
+
+                $contextPage = $this->data['context']['page'];
+
+                $contextPage["referrer"] = $firstPageView["referrer"] ?? null;
+                $contextPage["referring_domain"] = $firstPageView["referring_domain"] ?? null;
+                $contextPage["initial_referrer"] = $firstPageView["initial_referrer"] ?? null;
+                $contextPage["initial_referring_domain"] = $firstPageView["initial_referring_domain"] ?? null;
+
+                $this->data['context']['page'] = $contextPage;
             }
         }
 
 
         $url = "http://localhost:8080/$this->path";
         $headers = $this->headers;
-        $headers['authorization'] = 'Basic '.base64_encode($source->write_key.':');
+        $headers['authorization'] = 'Basic ' . base64_encode($source->write_key . ':');
 
         try {
             $response = Http::asJson()->acceptJson()->withoutVerifying()
@@ -163,7 +168,7 @@ class ProcessRudderRequest implements ShouldQueue
             }
         } catch (ConnectionException $e) {
             // Network/connection issues are retryable
-            Log::error('Connection error processing Rudder request: '.$e->getMessage(), [
+            Log::error('Connection error processing Rudder request: ' . $e->getMessage(), [
                 'source_key' => $this->sourceKey,
                 'url' => $url,
                 'attempt' => $this->attempts(),
@@ -173,7 +178,7 @@ class ProcessRudderRequest implements ShouldQueue
             throw $e;
         } catch (\Exception $e) {
             // For other exceptions, log and don't retry unless it's clearly retryable
-            Log::error('Unexpected error processing Rudder request: '.$e->getMessage(), [
+            Log::error('Unexpected error processing Rudder request: ' . $e->getMessage(), [
                 'source_key' => $this->sourceKey,
                 'url' => $url,
                 'attempt' => $this->attempts(),
