@@ -16,7 +16,10 @@ class GetNameSpaceConfigAction extends Controller
     public function __invoke(): JsonResponse
     {
         $allConfig = [];
-        $teams = Team::whereHas('destinationSources')->get();
+        // Eager load sources with their destinations to avoid N+1
+        $teams = Team::whereHas('destinationSources')
+            ->with(['sources.destinations'])
+            ->get();
 
         foreach ($teams as $team) {
             $workspaceId = $team->id;
@@ -69,9 +72,8 @@ class GetNameSpaceConfigAction extends Controller
             $connections = [];
             $uniqueDestinations = [];
 
-            $sourceModels = Source::with('destinations')->where('team_id', $team->id)->get();
-
-            foreach ($sourceModels as $source) {
+            // Use eager loaded sources from team relationship
+            foreach ($team->sources as $source) {
                 $sourceConfig = $baseSource;
                 $sourceConfig['name'] = $source->name;
                 $sourceConfig['id'] = $source->id;

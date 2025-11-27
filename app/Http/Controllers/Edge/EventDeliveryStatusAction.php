@@ -15,6 +15,30 @@ class EventDeliveryStatusAction extends Controller
     {
         $data = $request->all();
 
+        // Collect all unique destination and source IDs upfront to avoid N+1
+        $destinationIds = [];
+        $sourceIds = [];
+        foreach ($data as $key => $items) {
+            if ($key === 'version') {
+                continue;
+            }
+            foreach ($items as $item) {
+                if (isset($item['destinationId'])) {
+                    $destinationIds[] = $item['destinationId'];
+                }
+                if (isset($item['sourceId'])) {
+                    $sourceIds[] = $item['sourceId'];
+                }
+            }
+        }
+
+        // Eager load all destinations and sources in single queries
+        $destinations = Destination::whereIn('id', array_unique($destinationIds))->get()->keyBy('id');
+        $sources = Source::whereIn('id', array_unique($sourceIds))->get()->keyBy('id');
+
+        // Track destinations to batch update at the end
+        $destinationUpdates = [];
+
         foreach ($data as $key => $items) {
             if ($key === 'version') {
                 continue;
@@ -22,7 +46,7 @@ class EventDeliveryStatusAction extends Controller
 
             // Process each delivery status item for this destination
             foreach ($items as $item) {
-                $destination = Destination::find($item['destinationId']);
+                $destination = $destinations->get($item['destinationId']);
                 if (! $destination) {
                     continue;
                 }
@@ -37,7 +61,7 @@ class EventDeliveryStatusAction extends Controller
 
                 // Get source information
                 $sourceId = $item['sourceId'] ?? null;
-                $source = $sourceId ? Source::find($sourceId) : null;
+                $source = $sourceId ? $sources->get($sourceId) : null;
 
                 // Organize event data for broadcasting
                 $eventData = [
@@ -110,11 +134,17 @@ class EventDeliveryStatusAction extends Controller
                     ['team_id', 'destination_id', 'source_id', 'event_name', 'event_type', 'status', 'attempt_number', 'error_code', 'error_response', 'endpoint', 'method', 'user_id', 'anonymous_id', 'message_id', 'rudder_id', 'payload', 'event_timestamp', 'created_at']
                 );
 
-                // Update destination's last delivery timestamp
-                $destination->update([
-                    'last_delivery_at' => $item['sentAt'] ?? now(),
-                ]);
+                // Track destination update for batch processing
+                $lastDeliveryAt = $item['sentAt'] ?? now();
+                if (! isset($destinationUpdates[$destination->id]) || $lastDeliveryAt > $destinationUpdates[$destination->id]) {
+                    $destinationUpdates[$destination->id] = $lastDeliveryAt;
+                }
             }
+        }
+
+        // Batch update all destination last_delivery_at timestamps
+        foreach ($destinationUpdates as $destinationId => $lastDeliveryAt) {
+            Destination::where('id', $destinationId)->update(['last_delivery_at' => $lastDeliveryAt]);
         }
     }
 }
