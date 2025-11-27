@@ -113,7 +113,7 @@ class ProcessRudderRequest implements ShouldQueue
                     $oldProperties = $row['properties'];
                     $oldProperties = json_decode($oldProperties, true);
                     $pageProperties = $oldProperties['properties'];
-                    $pageContext = $oldProperties['properties']['context'];
+                    $pageContext = $oldProperties['context'];
 
                     dd($pageContext, $pageProperties);
                 }
