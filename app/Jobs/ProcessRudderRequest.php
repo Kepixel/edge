@@ -84,15 +84,14 @@ class ProcessRudderRequest implements ShouldQueue
         }
 
 
+        if ($this->isTrackEvent($this->path)) {
+            $sessionId   = (string) ($this->data['context']['sessionId'] ?? null);
+            $anonymousId = (string) ($this->data['anonymousId'] ?? null);
 
+            $client = app(Client::class);
 
-        $sessionId   = (string) ($this->data['context']['sessionId'] ?? null);
-        $anonymousId = (string) ($this->data['anonymousId'] ?? null);
-
-        $client = app(Client::class);
-
-        $row = $client->select(
-            '
+            $row = $client->select(
+                '
     SELECT *
     FROM event_upload_logs
     WHERE session_id = :sessionId
@@ -101,81 +100,21 @@ class ProcessRudderRequest implements ShouldQueue
     ORDER BY event_timestamp DESC
     LIMIT 1
     ',
-            [
-                'sessionId'   => $sessionId,
-                'anonymousId' => $anonymousId,
-                'eventName'   => 'page',
-            ]
-        )->fetchOne();
+                [
+                    'sessionId'   => $sessionId,
+                    'anonymousId' => $anonymousId,
+                    'eventName'   => 'page',
+                ]
+            )->fetchOne();
 
 
-        if ($row) {
-            if ($source->id == '019abff1-c1cc-7093-855c-283381814baf') {
-                dd($row);
+            if ($row) {
+                if ($source->id == '019abff1-c1cc-7093-855c-283381814baf') {
+                    dd($row);
+                }
             }
         }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//        $usageService = app(TeamEventUsageService::class);
-//        $currentMonth = now()->startOfMonth();
-//
-//        if ($usageService->limitReachedRecently($team, $currentMonth)) {
-//            Log::emergency('Team already exceeded monthly events quota (cached); dropping Rudder request.', [
-//                'team_id' => $team->id,
-//                'source_id' => $source->id,
-//                'path' => $this->path,
-//                'attempt' => $this->attempts(),
-//            ]);
-//
-//            return;
-//        }
-//
-//        $usage = $usageService->currentMonthUsage($team);
-//
-//        if ($usage !== null && $usageService->hasReachedLimit($usage)) {
-//            $usageService->storeTriggeredThreshold($team, $usage['month'], 100);
-//
-//            Log::emergency('Team reached the monthly events quota; dropping Rudder request.', [
-//                'team_id' => $team->id,
-//                'source_id' => $source->id,
-//                'used_events' => $usage['used_events'],
-//                'max_events' => $usage['max_events'],
-//                'path' => $this->path,
-//                'attempt' => $this->attempts(),
-//            ]);
-//
-//            return;
-//        }
-
-        // Enhanced port validation: check port in database, env file, and container status
-//        $validationResult = $this->validateTeamConfiguration($team, $source->id);
-//        if ($validationResult['should_return']) {
-//            return;
-//        }
-//        if ($validationResult['should_retry']) {
-//            throw new \RuntimeException($validationResult['message']);
-//        }
 
         $url = "http://localhost:8080/$this->path";
         $headers = $this->headers;
@@ -243,34 +182,9 @@ class ProcessRudderRequest implements ShouldQueue
             in_array($statusCode, [408, 429, 502, 503, 504, 522, 524]);
     }
 
-    private function injectUserTraits(): void
+
+    private function isTrackEvent($path): bool
     {
-        // TODO: Implement user traits injection logic from user identity from clickhouse
-        //        $this->data['context']['traits'];
-        //        $this->data['traits'];
-
-        $anonymousId = $this->data['anonymousId'] ?? null;
-        $userId = $this->data['userId'] ?? null;
-
-        //        if ($anonymousId) {
-        //            $rows = app(\ClickHouseDB\Client::class)->select(
-        //                "SELECT *
-        //                 FROM v_anonymous_clusters
-        //                 WHERE anonymous_id = '{$anonymousId}'"
-        //            );
-        //            $clusters = $rows->rows();
-        //
-        //            Log::emergency('clusters', [
-        //                '_clusters' => $clusters,
-        //                'anonymous_id' => $anonymousId,
-        //                'user_id' => $userId ?? 'not set',
-        //                'traits' => [
-        //                    'first' => $this->data['context']['traits'] ?? 'not set',
-        //                    'second' => $this->data['traits'] ?? 'not set',
-        //                ],
-        //            ]);
-        //
-        //        }
-
+        return $path === 'v1/t' || $path === 'v1/track';
     }
 }
