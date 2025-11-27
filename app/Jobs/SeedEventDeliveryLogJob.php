@@ -25,9 +25,9 @@ class SeedEventDeliveryLogJob implements ShouldQueue
      * Create a new job instance.
      */
     public function __construct(
-        public int $teamId,
-        public int $destinationId,
-        public ?int $sourceId,
+        public string $teamId,
+        public string $destinationId,
+        public ?string $sourceId,
         public array $item
     ) {}
 
