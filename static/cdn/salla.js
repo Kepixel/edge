@@ -207,7 +207,11 @@
 
     function buildAddToCartPayload(eventData, currency) {
         const ecommerce = eventData?.ecommerce || {};
-        const product = ecommerce.add.products[0];
+        const products = ecommerce.add?.products;
+        if (!Array.isArray(products) || products.length === 0) {
+            return null;
+        }
+        const product = products[0];
 
         return {
             currency: currency,
@@ -233,6 +237,9 @@
     function handleAddToCart(eventData, user, currency) {
         const finalCurrency = currency != null ? currency : eventData?.ecommerce?.currencyCode;
         const payload = buildAddToCartPayload(eventData, finalCurrency);
+        if (!payload) {
+            return;
+        }
 
         if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === 'function') {
             window.kepixelAnalytics.track('Product Added', payload);
@@ -246,6 +253,9 @@
         const purchase = ecommerce.purchase || {};
         const actionField = purchase.actionField || {};
         const products = Array.isArray(purchase.products) ? purchase.products : [];
+        if (products.length === 0) {
+            return null;
+        }
 
         return {
             currency: currency,
@@ -269,6 +279,9 @@
     function handlePurchase(eventData, user, currency) {
         const finalCurrency = currency != null ? currency : eventData?.ecommerce?.currencyCode;
         const payload = buildPurchasePayload(eventData, finalCurrency);
+        if (!payload) {
+            return;
+        }
 
         if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === 'function') {
             window.kepixelAnalytics.track('Order Completed', payload);
@@ -304,6 +317,9 @@
 
     function handleImpressions(eventData, user, currency) {
         const imps = eventData?.ecommerce?.impressions || [];
+        if (imps.length === 0) {
+            return;
+        }
 
         const products = imps.map((p, idx) => ({
             product_id: String(p.id),
@@ -335,7 +351,11 @@
     }
 
     function handleDetail(eventData, user, currency) {
-        const p = eventData?.ecommerce?.detail?.products?.[0] || {};
+        const products = eventData?.ecommerce?.detail?.products;
+        if (!Array.isArray(products) || products.length === 0) {
+            return;
+        }
+        const p = products[0] || {};
         const category =
             p?.category ||
             (Array.isArray(p?.categories) && p.categories[0]?.name) ||
@@ -384,8 +404,11 @@
         ensurePayloadDefaults(payload, updatedCurrency);
         trackEvent(eventData.event, payload, user);
 
-        if (eventData.event == 'Cart Viewed') {
+        if (eventData.event === 'Cart Viewed') {
             payload.order_id = payload.cart_id;
+            if (!Array.isArray(payload.products) || payload.products.length === 0) {
+                return updatedCurrency;
+            }
             trackEvent('Checkout Started', payload, user);
         }
 
