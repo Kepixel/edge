@@ -230,7 +230,7 @@
             sku: product.sku || "",
             cart_id: ecommerce.cart_id || "",
             coupon: ecommerce.coupon || "",
-            position: product.position || 1
+            position: product.position || 1,
         };
     }
 
@@ -241,6 +241,7 @@
             return;
         }
 
+        if (payload.brand === undefined || payload.brand === '' || payload.brand === null) payload.brand = 'brand';
         if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === 'function') {
             window.kepixelAnalytics.track('Product Added', payload);
         } else {
