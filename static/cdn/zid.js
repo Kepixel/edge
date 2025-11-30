@@ -106,6 +106,10 @@
                 if (kepixelEventName === 'Product Viewed') {
                     ev.properties.product_id = ev.properties.product_id || ev.properties.id || ev.properties['items'][0]?.id;
                     ev.properties.product = ev.properties['items'][0];
+                    ev.properties.name = ev.properties.product.item_name;
+                    ev.properties.price = ev.properties.product.price;
+                    ev.properties.product_id = ev.properties.product.id;
+                    ev.properties.sku = ev.properties.product.item_sku
                 }
                 if (kepixelEventName === 'Product Added') {
                     ev.properties.product_id = ev.properties.product_id || ev.properties.id || ev.properties['items'][0]?.id;
