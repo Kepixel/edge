@@ -82,66 +82,66 @@ class AnubisIndexController extends Controller
             $js .= PHP_EOL;
         }
 
-        $gtIds = [];
-        $gts = $source->destinations->where('platform', 'gtm');
-        foreach ($gts as $gt) {
-            $gtIds[] = $gt->config['containerID'] ?? $gt->config['container_id'];
-        }
-
-        if ($source->use_custom_gtm) {
-            $gtIds[] = $source->own_gtm_container_id;
-        }
-        if ($source->tag_id) {
-            $gtIds[] = $source->tag_id;
-        }
-        if (!empty($gtIds)) {
-            // Sanitize, trim, remove empties and duplicates
-            $gtIds = array_values(array_unique(array_filter(array_map(function ($v) {
-                $s = is_string($v) ? trim($v) : (is_null($v) ? '' : trim((string)$v));
-                return $s !== '' ? $s : null;
-            }, $gtIds))));
-
-            if (!empty($gtIds)) {
-                // Expose IDs to the GTM loader so it can configure them on load
-                $gtGlobals = 'window.GTM_CONTAINER_IDS = ' . json_encode($gtIds) . ';';
-                $js .= $gtGlobals . PHP_EOL;
-
-                // Append GTM loader script
-                $gtmJs = file_get_contents(base_path('static/sdk/gtm.js'));
-                $js .= $gtmJs;
-                $js .= PHP_EOL;
-            }
-        }
-
-        $gaIds = [];
-        $gas = $source->destinations->where('platform', 'google-analytics-4');
-        foreach ($gas as $ga) {
-            $gaIds[] = $ga->config['measurementId'] ?? $ga->config['measurement_id'];
-        }
-
-        if ($source->use_custom_google_analytics) {
-            $gaIds[] = $source->own_analytics_measurement_id;
-        }
-
-        if (!empty($gaIds)) {
-            // Sanitize, trim, remove empties and duplicates
-            $gaIds = array_values(array_unique(array_filter(array_map(function ($v) {
-                $s = is_string($v) ? trim($v) : (is_null($v) ? '' : trim((string)$v));
-                return $s !== '' ? $s : null;
-            }, $gaIds))));
-
-            // Expose IDs to the GA loader so it can configure them on load
-            if (!empty($gaIds)) {
-                $gaGlobals = 'window.GA_MEASUREMENT_IDS = ' . json_encode($gaIds) . ';';
-                // Also set a primary (legacy) ID for compatibility
-                $gaGlobals .= 'window.GA_MEASUREMENT_ID = ' . json_encode($gaIds[0]) . ';';
-                $js .= $gaGlobals . PHP_EOL;
-            }
-
-            $ga4Js = file_get_contents(base_path('static/sdk/ga.js'));
-            $js .= $ga4Js;
-            $js .= PHP_EOL;
-        }
+//        $gtIds = [];
+//        $gts = $source->destinations->where('platform', 'gtm');
+//        foreach ($gts as $gt) {
+//            $gtIds[] = $gt->config['containerID'] ?? $gt->config['container_id'];
+//        }
+//
+//        if ($source->use_custom_gtm) {
+//            $gtIds[] = $source->own_gtm_container_id;
+//        }
+//        if ($source->tag_id) {
+//            $gtIds[] = $source->tag_id;
+//        }
+//        if (!empty($gtIds)) {
+//            // Sanitize, trim, remove empties and duplicates
+//            $gtIds = array_values(array_unique(array_filter(array_map(function ($v) {
+//                $s = is_string($v) ? trim($v) : (is_null($v) ? '' : trim((string)$v));
+//                return $s !== '' ? $s : null;
+//            }, $gtIds))));
+//
+//            if (!empty($gtIds)) {
+//                // Expose IDs to the GTM loader so it can configure them on load
+//                $gtGlobals = 'window.GTM_CONTAINER_IDS = ' . json_encode($gtIds) . ';';
+//                $js .= $gtGlobals . PHP_EOL;
+//
+//                // Append GTM loader script
+//                $gtmJs = file_get_contents(base_path('static/sdk/gtm.js'));
+//                $js .= $gtmJs;
+//                $js .= PHP_EOL;
+//            }
+//        }
+//
+//        $gaIds = [];
+//        $gas = $source->destinations->where('platform', 'google-analytics-4');
+//        foreach ($gas as $ga) {
+//            $gaIds[] = $ga->config['measurementId'] ?? $ga->config['measurement_id'];
+//        }
+//
+//        if ($source->use_custom_google_analytics) {
+//            $gaIds[] = $source->own_analytics_measurement_id;
+//        }
+//
+//        if (!empty($gaIds)) {
+//            // Sanitize, trim, remove empties and duplicates
+//            $gaIds = array_values(array_unique(array_filter(array_map(function ($v) {
+//                $s = is_string($v) ? trim($v) : (is_null($v) ? '' : trim((string)$v));
+//                return $s !== '' ? $s : null;
+//            }, $gaIds))));
+//
+//            // Expose IDs to the GA loader so it can configure them on load
+//            if (!empty($gaIds)) {
+//                $gaGlobals = 'window.GA_MEASUREMENT_IDS = ' . json_encode($gaIds) . ';';
+//                // Also set a primary (legacy) ID for compatibility
+//                $gaGlobals .= 'window.GA_MEASUREMENT_ID = ' . json_encode($gaIds[0]) . ';';
+//                $js .= $gaGlobals . PHP_EOL;
+//            }
+//
+//            $ga4Js = file_get_contents(base_path('static/sdk/ga.js'));
+//            $js .= $ga4Js;
+//            $js .= PHP_EOL;
+//        }
 
         $minifier = new Minify\JS;
         $minifier->add($js);
