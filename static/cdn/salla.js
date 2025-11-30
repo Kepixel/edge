@@ -403,15 +403,29 @@
 
         const updatedCurrency = applyCurrencyFromPayload(payload, currency);
         ensurePayloadDefaults(payload, updatedCurrency);
-        trackEvent(eventData.event, payload, user);
 
         if (eventData.event === 'Cart Viewed') {
             payload.order_id = payload.cart_id;
             if (!Array.isArray(payload.products) || payload.products.length === 0) {
                 return updatedCurrency;
             }
+            const total = (Array.isArray(payload.products) ? payload.products : []).reduce((sum, p) => {
+                const price = isFinite(Number(p.price)) ? Number(p.price) : 0;
+                const quantity = p.quantity != null && isFinite(Number(p.quantity)) ? Number(p.quantity) : 1;
+                return sum + price * quantity;
+            }, 0);
+
+            payload.total = total;
+            payload.value = total;
+
             trackEvent('Checkout Started', payload, user);
+            trackEvent(eventData.event, payload, user);
+
+            return updatedCurrency;
+
         }
+
+        trackEvent(eventData.event, payload, user);
 
         return updatedCurrency;
     }
