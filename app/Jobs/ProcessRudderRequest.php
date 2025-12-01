@@ -108,6 +108,8 @@ class ProcessRudderRequest implements ShouldQueue
             )->fetchOne();
 
 
+
+
             if ($row) {
                 $oldProperties = $row['properties'];
                 $oldProperties = json_decode($oldProperties, true);
@@ -133,6 +135,10 @@ class ProcessRudderRequest implements ShouldQueue
             }
         }
 
+        if ($team->is_delivery_suspended) {
+            SeedEventUploadLogJob::dispatch($source, $this->data);
+            return;
+        }
 
         $url = "http://localhost:8080/$this->path";
         $headers = $this->headers;
