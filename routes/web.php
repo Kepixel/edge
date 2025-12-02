@@ -31,7 +31,7 @@ Route::get('exports/google-ads/{sourceKey}/conversions.csv', function (string $s
         // dummy rows
         [
             'Lead_Submit',
-            'CjwK-EXAMPLE-GCLID-123',
+            '',
             'alice@example.com',
             '+201234567890',
             $utc->toIso8601String(),
@@ -59,7 +59,7 @@ Route::get('exports/google-ads/{sourceKey}/conversions.csv', function (string $s
         ],
         [
             'Purchase',
-            'CjwK-ANOTHER-GLID-456',
+            '',
             '',
             '',
             $utc->subDays(2)->toIso8601String(),
