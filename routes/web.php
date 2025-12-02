@@ -28,7 +28,6 @@ Route::get('exports/google-ads/{sourceKey}/conversions.csv', function (string $s
 
     $utc = CarbonImmutable::now('UTC');
     $rows = [
-        // dummy rows
         [
             'Lead_Submit',
             '',
@@ -52,7 +51,7 @@ Route::get('exports/google-ads/{sourceKey}/conversions.csv', function (string $s
             '349.00',
             'USD',
             'ORD-90077',
-            'wb_example',
+            '',
             '',
             '',
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
@@ -67,7 +66,7 @@ Route::get('exports/google-ads/{sourceKey}/conversions.csv', function (string $s
             'USD',
             'ORD-90078',
             '',
-            'gb_example',
+            '',
             '',
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15)',
         ],
