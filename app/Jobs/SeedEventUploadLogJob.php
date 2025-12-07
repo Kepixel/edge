@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use Carbon\Carbon;
 use ClickHouseDB\Client;
-use ClickHouseDB\Exception\QueryException;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -35,8 +34,14 @@ class SeedEventUploadLogJob implements ShouldQueue
      */
     public function handle(): void
     {
-        // Persist the event for reporting and debugging
-        app(Client::class)->insert(
+        $client = app(Client::class);
+
+        $eventTimestamp = isset($this->data['sentAt'])
+            ? Carbon::parse($this->data['sentAt'])->format('Y-m-d H:i:s')
+            : now()->format('Y-m-d H:i:s');
+
+        // 1) insert raw event
+        $client->insert(
             'event_upload_logs',
             [
                 [
@@ -50,17 +55,45 @@ class SeedEventUploadLogJob implements ShouldQueue
                     $this->data['context']['sessionId'] ?? null,
                     $this->data['rudderId'] ?? null,
                     json_encode($this->data),
-                    isset($item['sentAt']) ? Carbon::parse($item['sentAt'])->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s'),
+                    $eventTimestamp,
                     now()->toDateTimeString(),
                 ],
             ],
-            ['team_id', 'source_id', 'event_name', 'event_type', 'user_id', 'anonymous_id', 'message_id', 'session_id', 'rudder_id', 'properties', 'event_timestamp', 'created_at']
+            [
+                'team_id',
+                'source_id',
+                'event_name',
+                'event_type',
+                'user_id',
+                'anonymous_id',
+                'message_id',
+                'session_id',
+                'rudder_id',
+                'properties',
+                'event_timestamp',
+                'created_at',
+            ]
         );
 
-        // Update source's last upload timestamp
+        // 2) update source
         $this->source->update([
-            'last_upload_at' => $item['sentAt'] ?? now(),
+            'last_upload_at' => $this->data['sentAt'] ?? now(),
         ]);
+
+        // 3) dispatch enrichment for this single event
+        ProcessEventEnrichedJob::dispatch(
+            teamId: $this->source->team_id,
+            sourceId: $this->source->id,
+            eventName: $this->data['event'] ?? $this->data['type'] ?? 'unknown',
+            eventType: $this->data['type'] ?? 'track',
+            userId: $this->data['userId'] ?? null,
+            anonymousId: $this->data['anonymousId'] ?? null,
+            messageId: $this->data['messageId'] ?? null,
+            sessionId: $this->data['context']['sessionId'] ?? null,
+            rudderId: $this->data['rudderId'] ?? null,
+            properties: $this->data,
+            eventTimestamp: $eventTimestamp,
+        );
     }
 
     /**
