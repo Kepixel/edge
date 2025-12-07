@@ -2,10 +2,11 @@
 
 namespace App\Jobs;
 
-use Carbon\Carbon;
 use ClickHouseDB\Client;
+use DateTime;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Throwable;
 
 class ProcessEventEnrichedJob implements ShouldQueue
 {
@@ -223,14 +224,16 @@ class ProcessEventEnrichedJob implements ShouldQueue
 
     /**
      * Execute the job.
+     * @throws Throwable
      */
     public function handle(): void
     {
         $client = app(Client::class);
 
-        $context = $this->properties['context'] ?? [];
-        $page = $context['page'] ?? [];
-        $campaign = $context['campaign'] ?? [];
+        // Validate and extract context data
+        $context = is_array($this->properties['context'] ?? null) ? $this->properties['context'] : [];
+        $page = is_array($context['page'] ?? null) ? $context['page'] : [];
+        $campaign = is_array($context['campaign'] ?? null) ? $context['campaign'] : [];
 
         $pageData = $this->extractPageData($page);
         $utmData = $this->parseUtmParameters($page, $campaign);
@@ -245,7 +248,8 @@ class ProcessEventEnrichedJob implements ShouldQueue
         $trafficChannel = $this->determineTrafficChannel($utmData, $pageData, $clickIdData, $isDirect, $isPaid);
         $platform = $this->determinePlatform($utmData, $pageData, $clickIdData, $isPaid, $trafficChannel);
 
-        $client->insert(
+        try {
+            $client->insert(
             'event_enriched',
             [
                 [
@@ -321,7 +325,11 @@ class ProcessEventEnrichedJob implements ShouldQueue
                 'traffic_channel',
                 'platform',
             ]
-        );
+            );
+        } catch (Throwable $e) {
+            report($e);
+            throw $e;
+        }
     }
 
     /**
@@ -977,7 +985,7 @@ class ProcessEventEnrichedJob implements ShouldQueue
     /**
      * Determine if the job should retry on the given exception.
      */
-    public function retryUntil(): \DateTime
+    public function retryUntil(): DateTime
     {
         return now()->addMinutes(10);
     }
