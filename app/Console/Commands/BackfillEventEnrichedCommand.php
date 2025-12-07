@@ -24,7 +24,8 @@ class BackfillEventEnrichedCommand extends Command
                             {--skip-existing : Skip events that already exist in event_enriched}
                             {--dry-run : Show what would be processed without actually dispatching jobs}
                             {--resume : Resume from last processed position}
-                            {--reset : Reset progress tracking and start fresh}';
+                            {--reset : Reset progress tracking and start fresh}
+                            {--timeout=30 : ClickHouse query timeout in seconds}';
 
     /**
      * The console command description.
@@ -43,6 +44,11 @@ class BackfillEventEnrichedCommand extends Command
     public function handle(): int
     {
         $this->client = app(Client::class);
+
+        // Set query timeout
+        $timeout = (int) $this->option('timeout');
+        $this->client->setTimeout($timeout);
+        $this->client->setConnectTimeOut($timeout);
 
         // Handle reset flag
         if ($this->option('reset')) {
@@ -132,7 +138,14 @@ class BackfillEventEnrichedCommand extends Command
                     }
 
                     if (!$dryRun) {
-                        $this->dispatchEnrichmentJob($row, $queue);
+                        $dispatched = $this->dispatchEnrichmentJob($row, $queue);
+                        if (!$dispatched) {
+                            // Row has invalid data (missing team_id, source_id, etc.)
+                            $this->skipped++;
+                            $progressBar->setMessage((string) $this->skipped, 'skipped');
+                            $progressBar->advance();
+                            continue;
+                        }
                     }
 
                     $this->processed++;
@@ -230,7 +243,13 @@ class BackfillEventEnrichedCommand extends Command
      */
     private function buildWhereClause(?string $fromDate, ?string $toDate, ?string $teamId, ?string $sourceId): string
     {
-        $conditions = [];
+        // Always filter out rows with null required fields
+        $conditions = [
+            "team_id IS NOT NULL",
+            "team_id != ''",
+            "source_id IS NOT NULL",
+            "source_id != ''",
+        ];
 
         if ($fromDate) {
             $conditions[] = "event_timestamp >= '{$fromDate} 00:00:00'";
@@ -246,10 +265,6 @@ class BackfillEventEnrichedCommand extends Command
 
         if ($sourceId) {
             $conditions[] = "source_id = '{$sourceId}'";
-        }
-
-        if (empty($conditions)) {
-            return '';
         }
 
         return 'WHERE ' . implode(' AND ', $conditions);
@@ -278,14 +293,24 @@ class BackfillEventEnrichedCommand extends Command
 
     /**
      * Dispatch the enrichment job for a single row.
+     * Returns false if row has invalid data and should be skipped.
      */
-    private function dispatchEnrichmentJob(array $row, string $queue): void
+    private function dispatchEnrichmentJob(array $row, string $queue): bool
     {
+        // Skip rows with missing required fields
+        $teamId = $row['team_id'] ?? null;
+        $sourceId = $row['source_id'] ?? null;
+        $eventTimestamp = $row['event_timestamp'] ?? null;
+
+        if (empty($teamId) || empty($sourceId) || empty($eventTimestamp)) {
+            return false;
+        }
+
         $properties = json_decode($row['properties'] ?? '{}', true) ?: [];
 
         ProcessEventEnrichedJob::dispatch(
-            teamId: $row['team_id'],
-            sourceId: $row['source_id'],
+            teamId: (string) $teamId,
+            sourceId: (string) $sourceId,
             eventName: $row['event_name'] ?? 'unknown',
             eventType: $row['event_type'] ?? 'track',
             userId: $row['user_id'] ?? null,
@@ -294,8 +319,10 @@ class BackfillEventEnrichedCommand extends Command
             sessionId: $row['session_id'] ?? null,
             rudderId: $row['rudder_id'] ?? null,
             properties: $properties,
-            eventTimestamp: $row['event_timestamp'],
+            eventTimestamp: (string) $eventTimestamp,
         )->onQueue($queue);
+
+        return true;
     }
 
     /**
