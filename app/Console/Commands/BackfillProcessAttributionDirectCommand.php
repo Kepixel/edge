@@ -26,6 +26,8 @@ class BackfillProcessAttributionDirectCommand extends Command
     protected $description = 'Process attribution directly via ClickHouse (fastest method for backfill)';
 
     private Client $client;
+    private int $maxRetries = 3;
+    private int $retryDelay = 5; // seconds
 
     // Attribution models
     private const MODEL_LAST_CLICK = 'last_click';
@@ -122,7 +124,10 @@ class BackfillProcessAttributionDirectCommand extends Command
         $this->info('Step 1/3: Building User Journeys...');
 
         $where = $this->buildWhereClause($fromDate, $toDate, $teamId, 'event_timestamp');
-        $total = $this->countEvents($where, $skipExisting);
+        $total = $this->withRetry(
+            fn() => $this->countEvents($where, $skipExisting),
+            'count events'
+        );
 
         if ($total === 0) {
             $this->info('  -> No events to process');
@@ -138,7 +143,10 @@ class BackfillProcessAttributionDirectCommand extends Command
         $processedUsers = 0;
 
         while ($offset < $total) {
-            $events = $this->fetchEnrichedEvents($where, $offset, $chunkSize, $skipExisting);
+            $events = $this->withRetry(
+                fn() => $this->fetchEnrichedEvents($where, $offset, $chunkSize, $skipExisting),
+                'fetch events'
+            );
 
             if (empty($events)) {
                 break;
@@ -160,9 +168,12 @@ class BackfillProcessAttributionDirectCommand extends Command
                 }
             }
 
-            // Insert touchpoints
+            // Insert touchpoints with retry
             if (!$dryRun && !empty($touchpointRows)) {
-                $this->insertTouchpoints($touchpointRows);
+                $this->withRetry(
+                    fn() => $this->insertTouchpoints($touchpointRows),
+                    'insert touchpoints'
+                );
             }
 
             $progressBar->advance(count($events));
@@ -454,7 +465,10 @@ class BackfillProcessAttributionDirectCommand extends Command
 
         $where = $this->buildWhereClause($fromDate, $toDate, $teamId, 'touchpoint_timestamp');
         $where .= " AND is_conversion = 1";
-        $total = $this->countConversions($where, $skipExisting);
+        $total = $this->withRetry(
+            fn() => $this->countConversions($where, $skipExisting),
+            'count conversions'
+        );
 
         if ($total === 0) {
             $this->info('  -> No conversions to process');
@@ -473,7 +487,10 @@ class BackfillProcessAttributionDirectCommand extends Command
         $processedConversions = 0;
 
         while ($offset < $total) {
-            $conversions = $this->fetchConversions($where, $offset, $chunkSize, $skipExisting);
+            $conversions = $this->withRetry(
+                fn() => $this->fetchConversions($where, $offset, $chunkSize, $skipExisting),
+                'fetch conversions'
+            );
 
             if (empty($conversions)) {
                 break;
@@ -483,11 +500,14 @@ class BackfillProcessAttributionDirectCommand extends Command
             $deduplicatedResults = [];
 
             foreach ($conversions as $conversion) {
-                // Get touchpoints for this user
-                $touchpoints = $this->fetchUserTouchpoints(
-                    $conversion['team_id'],
-                    $conversion['resolved_user_id'],
-                    $conversion['touchpoint_timestamp']
+                // Get touchpoints for this user with retry
+                $touchpoints = $this->withRetry(
+                    fn() => $this->fetchUserTouchpoints(
+                        $conversion['team_id'],
+                        $conversion['resolved_user_id'],
+                        $conversion['touchpoint_timestamp']
+                    ),
+                    'fetch user touchpoints'
                 );
 
                 if (!empty($touchpoints)) {
@@ -505,13 +525,19 @@ class BackfillProcessAttributionDirectCommand extends Command
                 $processedConversions++;
             }
 
-            // Insert results
+            // Insert results with retry
             if (!$dryRun) {
                 if (!empty($platformResults)) {
-                    $this->insertAttributionResults($platformResults, 'platform');
+                    $this->withRetry(
+                        fn() => $this->insertAttributionResults($platformResults, 'platform'),
+                        'insert platform results'
+                    );
                 }
                 if (!empty($deduplicatedResults)) {
-                    $this->insertAttributionResults($deduplicatedResults, 'deduplicated');
+                    $this->withRetry(
+                        fn() => $this->insertAttributionResults($deduplicatedResults, 'deduplicated'),
+                        'insert deduplicated results'
+                    );
                 }
             }
 
@@ -1032,9 +1058,12 @@ class BackfillProcessAttributionDirectCommand extends Command
 
         $where = $this->buildWhereClause($fromDate, $toDate, $teamId, 'touchpoint_timestamp');
 
-        // Get distinct users
+        // Get distinct users with retry
         $sql = "SELECT DISTINCT team_id, resolved_user_id FROM user_touchpoints {$where}";
-        $users = $this->client->select($sql)->rows();
+        $users = $this->withRetry(
+            fn() => $this->client->select($sql)->rows(),
+            'fetch distinct users'
+        );
 
         $total = count($users);
 
@@ -1055,14 +1084,20 @@ class BackfillProcessAttributionDirectCommand extends Command
             $summaries = [];
 
             foreach ($chunk as $user) {
-                $summary = $this->buildUserSummary($user['team_id'], $user['resolved_user_id']);
+                $summary = $this->withRetry(
+                    fn() => $this->buildUserSummary($user['team_id'], $user['resolved_user_id']),
+                    'build user summary'
+                );
                 if ($summary) {
                     $summaries[] = $summary;
                 }
             }
 
             if (!$dryRun && !empty($summaries)) {
-                $this->insertSummaries($summaries);
+                $this->withRetry(
+                    fn() => $this->insertSummaries($summaries),
+                    'insert summaries'
+                );
             }
 
             $progressBar->advance(count($chunk));
@@ -1288,5 +1323,57 @@ class BackfillProcessAttributionDirectCommand extends Command
         $startTime = strtotime($start);
         $endTime = strtotime($end);
         return (int) floor(($endTime - $startTime) / 3600);
+    }
+
+    /**
+     * Reconnect to ClickHouse with fresh client.
+     */
+    private function reconnect(): void
+    {
+        $this->client = app(Client::class);
+        $this->client->setTimeout(600);
+        $this->client->setConnectTimeOut(60);
+    }
+
+    /**
+     * Execute a ClickHouse operation with retry logic.
+     */
+    private function withRetry(callable $operation, string $operationName = 'operation')
+    {
+        $lastException = null;
+
+        for ($attempt = 1; $attempt <= $this->maxRetries; $attempt++) {
+            try {
+                return $operation();
+            } catch (Throwable $e) {
+                $lastException = $e;
+                $errorMessage = $e->getMessage();
+
+                // Check if it's a connection error
+                $isConnectionError = str_contains($errorMessage, "Couldn't connect")
+                    || str_contains($errorMessage, 'Failed to connect')
+                    || str_contains($errorMessage, 'Connection refused')
+                    || str_contains($errorMessage, 'Connection timed out')
+                    || str_contains($errorMessage, 'Operation timed out');
+
+                if ($isConnectionError && $attempt < $this->maxRetries) {
+                    $this->newLine();
+                    $this->warn("  Connection error on {$operationName} (attempt {$attempt}/{$this->maxRetries}): {$errorMessage}");
+                    $this->info("  Waiting {$this->retryDelay} seconds before retry...");
+
+                    sleep($this->retryDelay);
+
+                    // Reconnect
+                    $this->reconnect();
+
+                    continue;
+                }
+
+                // Not a connection error or max retries reached
+                throw $e;
+            }
+        }
+
+        throw $lastException;
     }
 }

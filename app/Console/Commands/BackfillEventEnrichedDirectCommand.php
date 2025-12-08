@@ -27,6 +27,10 @@ class BackfillEventEnrichedDirectCommand extends Command
 
     private Client $client;
 
+    private int $maxRetries = 3;
+
+    private int $retryDelay = 5; // seconds
+
     // Source constants
     private const SEARCH_SOURCES = [
         'google', 'googleads', 'bing', 'bingads', 'yahoo', 'duckduckgo', 'baidu', 'yandex',
@@ -328,8 +332,10 @@ class BackfillEventEnrichedDirectCommand extends Command
             ";
         }
 
-        $result = $this->client->select($sql);
-        return (int) ($result->rows()[0]['cnt'] ?? 0);
+        return $this->withRetry(function () use ($sql) {
+            $result = $this->client->select($sql);
+            return (int) ($result->rows()[0]['cnt'] ?? 0);
+        }, 'count total');
     }
 
     private function fetchBatch(int $offset, int $limit, ?string $fromDate, ?string $toDate, ?string $teamId, ?string $sourceId, bool $skipExisting): array
@@ -377,7 +383,9 @@ class BackfillEventEnrichedDirectCommand extends Command
             ";
         }
 
-        return $this->client->select($sql)->rows();
+        return $this->withRetry(function () use ($sql) {
+            return $this->client->select($sql)->rows();
+        }, 'fetch batch');
     }
 
     private function buildWhereClause(?string $fromDate, ?string $toDate, ?string $teamId, ?string $sourceId): string
@@ -522,23 +530,27 @@ class BackfillEventEnrichedDirectCommand extends Command
 
     private function insertEnrichedBatch(array $rows): void
     {
-        $this->client->insert('event_enriched', $rows, [
-            'event_date', 'event_timestamp', 'team_id', 'source_id', 'event_name', 'event_type',
-            'user_id', 'anonymous_id', 'message_id', 'session_id', 'rudder_id',
-            'page_path', 'page_url', 'page_title', 'page_domain', 'page_query',
-            'landing_referrer', 'landing_referring_domain', 'last_referrer', 'last_referring_domain',
-            'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
-            'utm_id', 'utm_source_platform', 'utm_content_type', 'ad_campaign_native_id', 'click_id',
-            'is_direct', 'is_paid', 'traffic_channel', 'platform',
-        ]);
+        $this->withRetry(function () use ($rows) {
+            $this->client->insert('event_enriched', $rows, [
+                'event_date', 'event_timestamp', 'team_id', 'source_id', 'event_name', 'event_type',
+                'user_id', 'anonymous_id', 'message_id', 'session_id', 'rudder_id',
+                'page_path', 'page_url', 'page_title', 'page_domain', 'page_query',
+                'landing_referrer', 'landing_referring_domain', 'last_referrer', 'last_referring_domain',
+                'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+                'utm_id', 'utm_source_platform', 'utm_content_type', 'ad_campaign_native_id', 'click_id',
+                'is_direct', 'is_paid', 'traffic_channel', 'platform',
+            ]);
+        }, 'insert enriched batch');
     }
 
     private function insertIdentityBatch(array $rows): void
     {
         try {
-            $this->client->insert('identity_mappings', $rows, [
-                'team_id', 'anonymous_id', 'user_id', 'first_seen_at', 'last_seen_at',
-            ]);
+            $this->withRetry(function () use ($rows) {
+                $this->client->insert('identity_mappings', $rows, [
+                    'team_id', 'anonymous_id', 'user_id', 'first_seen_at', 'last_seen_at',
+                ]);
+            }, 'insert identity batch');
         } catch (Throwable $e) {
             Log::warning('BackfillEventEnrichedDirect: Identity insert failed', ['error' => $e->getMessage()]);
         }
@@ -547,10 +559,12 @@ class BackfillEventEnrichedDirectCommand extends Command
     private function insertProfileBatch(array $rows): void
     {
         try {
-            $this->client->insert('user_profiles', $rows, [
-                'team_id', 'canonical_user_id', 'email', 'phone', 'name', 'username',
-                'first_name', 'last_name', 'avatar', 'first_seen', 'last_seen', 'traits',
-            ]);
+            $this->withRetry(function () use ($rows) {
+                $this->client->insert('user_profiles', $rows, [
+                    'team_id', 'canonical_user_id', 'email', 'phone', 'name', 'username',
+                    'first_name', 'last_name', 'avatar', 'first_seen', 'last_seen', 'traits',
+                ]);
+            }, 'insert profile batch');
         } catch (Throwable $e) {
             Log::warning('BackfillEventEnrichedDirect: Profile insert failed', ['error' => $e->getMessage()]);
         }
@@ -1208,5 +1222,51 @@ class BackfillEventEnrichedDirectCommand extends Command
             return false;
         }
         return mb_stripos($haystack, $needle) !== false;
+    }
+
+    /**
+     * Reconnect to ClickHouse with fresh client.
+     */
+    private function reconnect(): void
+    {
+        $this->client = app(Client::class);
+        $this->client->setTimeout(600 * 4);
+        $this->client->setConnectTimeOut(60 * 4);
+    }
+
+    /**
+     * Execute an operation with retry logic for connection errors.
+     */
+    private function withRetry(callable $operation, string $operationName = 'operation')
+    {
+        $lastException = null;
+
+        for ($attempt = 1; $attempt <= $this->maxRetries; $attempt++) {
+            try {
+                return $operation();
+            } catch (Throwable $e) {
+                $lastException = $e;
+                $errorMessage = $e->getMessage();
+
+                $isConnectionError = str_contains($errorMessage, "Couldn't connect")
+                    || str_contains($errorMessage, 'Failed to connect')
+                    || str_contains($errorMessage, 'Connection refused')
+                    || str_contains($errorMessage, 'Connection timed out')
+                    || str_contains($errorMessage, 'Operation timed out');
+
+                if ($isConnectionError && $attempt < $this->maxRetries) {
+                    $this->newLine();
+                    $this->warn("  Connection error on {$operationName} (attempt {$attempt}/{$this->maxRetries}): {$errorMessage}");
+                    $this->info("  Waiting {$this->retryDelay} seconds before retry...");
+                    sleep($this->retryDelay);
+                    $this->reconnect();
+                    continue;
+                }
+
+                throw $e;
+            }
+        }
+
+        throw $lastException;
     }
 }
