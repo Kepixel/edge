@@ -569,130 +569,157 @@ class BackfillProcessAttributionDirectCommand extends Command
     {
         $this->newLine();
         $this->info('=== Step 2/3: Calculating Attribution ===');
+        $this->info('Using optimized last-click attribution (ClickHouse native)...');
+        $this->newLine();
 
-        $where = $this->buildWhereClause($fromDate, $toDate, $teamId, 'touchpoint_timestamp');
-        $where .= " AND is_conversion = 1";
-        $total = $this->withRetry(
-            fn() => $this->countConversions($where, $skipExisting),
-            'count conversions'
-        );
+        // Build date filter
+        $dateFilter = '';
+        if ($fromDate) {
+            $dateFilter .= " AND touchpoint_timestamp >= '{$fromDate} 00:00:00'";
+        }
+        if ($toDate) {
+            $dateFilter .= " AND touchpoint_timestamp <= '{$toDate} 23:59:59'";
+        }
+        if ($teamId) {
+            $dateFilter .= " AND team_id = '{$teamId}'";
+        }
 
-        if ($total === 0) {
-            $this->warn('No conversions to process.');
+        $skipFilter = $skipExisting
+            ? " AND c.message_id NOT IN (SELECT DISTINCT conversion_message_id FROM attributed_conversions WHERE conversion_message_id != '')"
+            : '';
+
+        if ($dryRun) {
+            // Count what would be processed
+            $countSql = "
+                SELECT count() as cnt
+                FROM user_touchpoints c
+                WHERE c.is_conversion = 1
+                {$dateFilter}
+                {$skipFilter}
+            ";
+            $result = $this->withRetry(fn() => $this->client->select($countSql), 'count conversions');
+            $total = (int) ($result->rows()[0]['cnt'] ?? 0);
+
+            $this->info("Would process " . number_format($total) . " conversions (DRY RUN)");
             return;
         }
 
-        // Use smaller chunk for attribution (fetches many touchpoints per conversion)
-        $attributionChunkSize = min($chunkSize, 500);
+        // Execute INSERT...SELECT for last_click attribution (most common model)
+        // This does everything in ClickHouse - MUCH faster than PHP processing
+        $this->info('Inserting last-click attributions...');
 
-        $this->info("Total conversions to process: " . number_format($total));
-        $this->info("Chunk size: " . number_format($attributionChunkSize) . " (optimized for attribution)");
-        $this->newLine();
+        $insertSql = "
+            INSERT INTO attributed_conversions
+            SELECT
+                -- Conversion info
+                toDate(c.touchpoint_timestamp) as conversion_date,
+                c.team_id,
+                c.resolved_user_id,
+                c.touchpoint_timestamp as conversion_timestamp,
+                c.event_name as conversion_event,
+                c.conversion_value,
+                c.conversion_revenue,
+                c.conversion_currency,
+                c.conversion_score,
+                c.order_id,
+                c.message_id as conversion_message_id,
 
-        $progressBar = $this->output->createProgressBar($total);
-        $progressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% | Elapsed: %elapsed:6s% | ETA: %remaining:-6s%');
-        $progressBar->start();
+                -- Last touchpoint info (using window function)
+                last_tp.touchpoint_number,
+                last_tp.touchpoint_timestamp,
+                last_tp.message_id as touchpoint_message_id,
+                last_tp.platform,
+                last_tp.traffic_channel,
+                last_tp.utm_source,
+                last_tp.utm_medium,
+                last_tp.utm_campaign,
+                last_tp.utm_content,
+                last_tp.utm_term,
+                last_tp.click_id,
+                last_tp.is_paid,
 
-        // Get platform configs (cached)
-        $platformConfigs = $this->getPlatformConfigs();
+                -- Attribution info
+                'deduplicated' as attribution_type,
+                'last_click' as model,
+                1.0 as attribution_credit,
+                c.conversion_value as attributed_value,
+                c.conversion_revenue as attributed_revenue,
+                c.conversion_score as attributed_score,
+                0 as is_assisted,
+                0 as assisted_value,
+                0 as assisted_revenue,
 
-        $offset = 0;
-        $processedConversions = 0;
-        $platformResultsCount = 0;
-        $deduplicatedResultsCount = 0;
-        $failedBatches = 0;
+                -- Time calculations
+                dateDiff('day', last_tp.touchpoint_timestamp, c.touchpoint_timestamp) as days_to_conversion,
+                dateDiff('hour', last_tp.touchpoint_timestamp, c.touchpoint_timestamp) as hours_to_conversion,
+                1 as within_click_window,
+                1 as within_view_window,
+                1 as platform_priority,
+                30 as platform_click_window,
+                1 as platform_view_window,
+                if(last_tp.touchpoint_number = 1, 1, 0) as is_first_touch,
+                1 as is_last_touch,
+                last_tp.total_touchpoints
 
-        while ($offset < $total) {
-            try {
-                $conversions = $this->withRetry(
-                    fn() => $this->fetchConversions($where, $offset, $attributionChunkSize, $skipExisting),
-                    'fetch conversions'
-                );
+            FROM user_touchpoints c
+            INNER JOIN (
+                SELECT
+                    team_id,
+                    resolved_user_id,
+                    touchpoint_timestamp,
+                    touchpoint_number,
+                    message_id,
+                    platform,
+                    traffic_channel,
+                    utm_source,
+                    utm_medium,
+                    utm_campaign,
+                    utm_content,
+                    utm_term,
+                    click_id,
+                    is_paid,
+                    count() OVER (PARTITION BY team_id, resolved_user_id) as total_touchpoints,
+                    row_number() OVER (PARTITION BY team_id, resolved_user_id ORDER BY touchpoint_timestamp DESC) as rn
+                FROM user_touchpoints
+                WHERE is_conversion = 0
+                {$dateFilter}
+            ) last_tp ON c.team_id = last_tp.team_id
+                AND c.resolved_user_id = last_tp.resolved_user_id
+                AND last_tp.touchpoint_timestamp < c.touchpoint_timestamp
+                AND last_tp.rn = 1
 
-                if (empty($conversions)) {
-                    break;
-                }
+            WHERE c.is_conversion = 1
+            {$dateFilter}
+            {$skipFilter}
+        ";
 
-                // Batch fetch all touchpoints for all conversions in this chunk
-                $allTouchpoints = $this->withRetry(
-                    fn() => $this->batchFetchUserTouchpoints($conversions),
-                    'batch fetch user touchpoints'
-                );
-
-                $platformResults = [];
-                $deduplicatedResults = [];
-
-                foreach ($conversions as $conversion) {
-                    $userKey = "{$conversion['team_id']}:{$conversion['resolved_user_id']}";
-                    $conversionTime = strtotime($conversion['touchpoint_timestamp']);
-
-                    // Filter touchpoints for this user that are before the conversion
-                    $touchpoints = [];
-                    if (isset($allTouchpoints[$userKey])) {
-                        foreach ($allTouchpoints[$userKey] as $tp) {
-                            if (strtotime($tp['touchpoint_timestamp']) < $conversionTime) {
-                                $touchpoints[] = $tp;
-                            }
-                        }
-                    }
-
-                    if (!empty($touchpoints)) {
-                        // Calculate both views
-                        $platformResults = array_merge(
-                            $platformResults,
-                            $this->calculatePlatformView($touchpoints, $conversion, $platformConfigs)
-                        );
-                        $deduplicatedResults = array_merge(
-                            $deduplicatedResults,
-                            $this->calculateDeduplicatedView($touchpoints, $conversion, $platformConfigs)
-                        );
-                    }
-
-                    $processedConversions++;
-                }
-
-                // Insert results with retry
-                if (!$dryRun) {
-                    if (!empty($platformResults)) {
-                        $this->withRetry(
-                            fn() => $this->insertAttributionResults($platformResults, 'platform'),
-                            'insert platform results'
-                        );
-                        $platformResultsCount += count($platformResults);
-                    }
-                    if (!empty($deduplicatedResults)) {
-                        $this->withRetry(
-                            fn() => $this->insertAttributionResults($deduplicatedResults, 'deduplicated'),
-                            'insert deduplicated results'
-                        );
-                        $deduplicatedResultsCount += count($deduplicatedResults);
-                    }
-                }
-
-                $progressBar->advance(count($conversions));
-                $offset += $attributionChunkSize;
-
-            } catch (Throwable $e) {
-                $failedBatches++;
-                $this->newLine();
-                $this->error("Error at offset {$offset}: " . $e->getMessage());
-                Log::error('BackfillProcessAttribution: Attribution error', [
-                    'offset' => $offset,
-                    'error' => $e->getMessage(),
-                ]);
-                $offset += $attributionChunkSize;
-            }
+        try {
+            $this->withRetry(fn() => $this->client->write($insertSql), 'insert last-click attributions');
+            $this->info('Last-click attributions inserted successfully.');
+        } catch (Throwable $e) {
+            $this->error('Error inserting attributions: ' . $e->getMessage());
+            Log::error('BackfillProcessAttribution: Attribution error', ['error' => $e->getMessage()]);
+            return;
         }
 
-        $progressBar->finish();
-        $this->newLine(2);
+        // Count what was inserted
+        $countInsertedSql = "
+            SELECT count() as cnt
+            FROM attributed_conversions
+            WHERE conversion_date >= '{$fromDate}'
+            " . ($toDate ? "AND conversion_date <= '{$toDate}'" : '') . "
+            " . ($teamId ? "AND team_id = '{$teamId}'" : '') . "
+        ";
 
+        $result = $this->withRetry(fn() => $this->client->select($countInsertedSql), 'count inserted');
+        $insertedCount = (int) ($result->rows()[0]['cnt'] ?? 0);
+
+        $this->newLine();
         $this->info("=== Attribution Summary ===");
         $this->table(['Metric', 'Count'], [
-            ['Conversions processed', number_format($processedConversions)],
-            ['Platform attributions', number_format($platformResultsCount)],
-            ['Deduplicated attributions', number_format($deduplicatedResultsCount)],
-            ['Failed batches', number_format($failedBatches)],
+            ['Attributions created', number_format($insertedCount)],
+            ['Model', 'last_click'],
+            ['Type', 'deduplicated'],
         ]);
     }
 
