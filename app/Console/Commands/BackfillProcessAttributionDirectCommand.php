@@ -242,6 +242,8 @@ class BackfillProcessAttributionDirectCommand extends Command
             ? "AND e.message_id NOT IN (SELECT source_message_id FROM user_touchpoints WHERE source_message_id != '')"
             : '';
 
+        // Join with event_upload_logs to get properties for revenue extraction
+        // Revenue is extracted from properties JSON at query time
         $sql = "
             SELECT
                 e.team_id,
@@ -267,8 +269,33 @@ class BackfillProcessAttributionDirectCommand extends Command
                 e.platform,
                 e.click_id,
                 e.is_paid,
-                e.is_direct
+                e.is_direct,
+                -- Extract revenue from event_upload_logs.properties
+                coalesce(
+                    JSONExtractFloat(el.properties, 'properties', 'revenue'),
+                    JSONExtractFloat(el.properties, 'properties', 'total'),
+                    JSONExtractFloat(el.properties, 'properties', 'value'),
+                    JSONExtractFloat(el.properties, 'properties', 'purchase', 'actionField', 'revenue'),
+                    0
+                ) as conversion_revenue,
+                coalesce(
+                    JSONExtractFloat(el.properties, 'properties', 'value'),
+                    JSONExtractFloat(el.properties, 'properties', 'total'),
+                    JSONExtractFloat(el.properties, 'properties', 'revenue'),
+                    0
+                ) as conversion_value,
+                coalesce(
+                    nullIf(JSONExtractString(el.properties, 'properties', 'currency'), ''),
+                    'USD'
+                ) as conversion_currency,
+                coalesce(
+                    nullIf(JSONExtractString(el.properties, 'properties', 'order_id'), ''),
+                    nullIf(JSONExtractString(el.properties, 'properties', 'orderId'), ''),
+                    nullIf(JSONExtractString(el.properties, 'properties', 'transaction_id'), ''),
+                    ''
+                ) as order_id
             FROM event_enriched e
+            LEFT JOIN event_upload_logs el ON e.message_id = el.message_id
             {$where}
             {$skipClause}
             ORDER BY e.event_timestamp ASC
@@ -496,10 +523,10 @@ class BackfillProcessAttributionDirectCommand extends Command
                 $event['event_type'] ?? '',
                 $isConversion ? 1 : 0,
                 $conversionScore,
-                0, // conversion_value
-                0, // conversion_revenue
-                'USD',
-                '', // order_id
+                (float) ($event['conversion_value'] ?? 0),
+                (float) ($event['conversion_revenue'] ?? 0),
+                $event['conversion_currency'] ?? 'USD',
+                $event['order_id'] ?? '',
                 $daysSinceFirst,
                 $hoursSinceFirst,
                 $hoursSincePrev,

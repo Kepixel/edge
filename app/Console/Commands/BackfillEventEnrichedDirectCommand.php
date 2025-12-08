@@ -453,6 +453,9 @@ class BackfillEventEnrichedDirectCommand extends Command
         $trafficChannel = $this->determineTrafficChannel($utmData, $pageData, $clickIdData, $isDirect, $isPaid);
         $platform = $this->determinePlatform($utmData, $pageData, $clickIdData, $isPaid, $trafficChannel);
 
+        // Extract conversion/revenue data
+        $revenueData = $this->extractRevenueData($properties, $eventName);
+
         $result = [
             'event' => [
                 substr($eventTimestamp, 0, 10),
@@ -489,6 +492,10 @@ class BackfillEventEnrichedDirectCommand extends Command
                 $isPaid,
                 $trafficChannel,
                 $platform,
+                $revenueData['value'],
+                $revenueData['revenue'],
+                $revenueData['currency'],
+                $revenueData['orderId'],
             ],
             'identity' => null,
             'profile' => null,
@@ -539,6 +546,7 @@ class BackfillEventEnrichedDirectCommand extends Command
                 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
                 'utm_id', 'utm_source_platform', 'utm_content_type', 'ad_campaign_native_id', 'click_id',
                 'is_direct', 'is_paid', 'traffic_channel', 'platform',
+                'conversion_value', 'conversion_revenue', 'conversion_currency', 'order_id',
             ]);
         }, 'insert enriched batch');
     }
@@ -1211,6 +1219,60 @@ class BackfillEventEnrichedDirectCommand extends Command
         }
 
         return self::PLATFORM_OTHER_PAID;
+    }
+
+    /**
+     * Extract revenue/value data from event properties.
+     * Handles various property structures from different e-commerce platforms.
+     */
+    private function extractRevenueData(array $properties, string $eventName): array
+    {
+        $result = [
+            'value' => 0.0,
+            'revenue' => 0.0,
+            'currency' => 'USD',
+            'orderId' => '',
+        ];
+
+        // Get the nested properties if they exist
+        $props = $properties['properties'] ?? $properties;
+
+        // Extract order ID (various field names)
+        $result['orderId'] = (string) ($props['order_id'] ?? $props['orderId'] ?? $props['transaction_id'] ?? $props['checkout_id'] ?? '');
+
+        // Extract currency
+        $result['currency'] = $props['currency'] ?? $props['purchase']['actionField']['currency'] ?? 'USD';
+
+        // Extract value - try multiple common field names
+        $value = $props['value'] ?? $props['total'] ?? $props['subtotal'] ?? 0;
+
+        // Try nested structures (Google Analytics ecommerce)
+        if ($value == 0 && isset($props['purchase']['actionField']['revenue'])) {
+            $value = $props['purchase']['actionField']['revenue'];
+        }
+
+        $result['value'] = (float) $value;
+
+        // Extract revenue - often same as value, but can be different
+        $revenue = $props['revenue'] ?? $props['total'] ?? $value;
+
+        // Try nested structures
+        if ($revenue == 0 && isset($props['purchase']['actionField']['revenue'])) {
+            $revenue = $props['purchase']['actionField']['revenue'];
+        }
+
+        $result['revenue'] = (float) $revenue;
+
+        // For non-purchase events, revenue might be in different places
+        $eventLower = strtolower($eventName);
+        if (in_array($eventLower, ['lead', 'sign_up', 'signup', 'form_submitted', 'form submitted'])) {
+            // Lead events might have a fixed value or estimated value
+            if ($result['value'] == 0) {
+                $result['value'] = (float) ($props['estimated_value'] ?? $props['lead_value'] ?? 0);
+            }
+        }
+
+        return $result;
     }
 
     /**
