@@ -582,8 +582,11 @@ class BackfillProcessAttributionDirectCommand extends Command
             return;
         }
 
+        // Use smaller chunk for attribution (fetches many touchpoints per conversion)
+        $attributionChunkSize = min($chunkSize, 500);
+
         $this->info("Total conversions to process: " . number_format($total));
-        $this->info("Chunk size: " . number_format($chunkSize));
+        $this->info("Chunk size: " . number_format($attributionChunkSize) . " (optimized for attribution)");
         $this->newLine();
 
         $progressBar = $this->output->createProgressBar($total);
@@ -602,7 +605,7 @@ class BackfillProcessAttributionDirectCommand extends Command
         while ($offset < $total) {
             try {
                 $conversions = $this->withRetry(
-                    fn() => $this->fetchConversions($where, $offset, $chunkSize, $skipExisting),
+                    fn() => $this->fetchConversions($where, $offset, $attributionChunkSize, $skipExisting),
                     'fetch conversions'
                 );
 
@@ -667,7 +670,7 @@ class BackfillProcessAttributionDirectCommand extends Command
                 }
 
                 $progressBar->advance(count($conversions));
-                $offset += $chunkSize;
+                $offset += $attributionChunkSize;
 
             } catch (Throwable $e) {
                 $failedBatches++;
@@ -677,7 +680,7 @@ class BackfillProcessAttributionDirectCommand extends Command
                     'offset' => $offset,
                     'error' => $e->getMessage(),
                 ]);
-                $offset += $chunkSize;
+                $offset += $attributionChunkSize;
             }
         }
 
@@ -738,7 +741,8 @@ class BackfillProcessAttributionDirectCommand extends Command
     }
 
     /**
-     * Batch fetch all touchpoints for multiple conversions in a single query.
+     * Batch fetch touchpoints for multiple conversions.
+     * For large batches, processes in smaller sub-batches to avoid timeout.
      * Returns touchpoints grouped by team_id:resolved_user_id key.
      */
     private function batchFetchUserTouchpoints(array $conversions): array
@@ -759,6 +763,30 @@ class BackfillProcessAttributionDirectCommand extends Command
             }
         }
 
+        if (empty($userKeys)) {
+            return [];
+        }
+
+        // Process in smaller sub-batches to avoid huge queries (max 100 users per query)
+        $subBatchSize = 100;
+        $userKeyChunks = array_chunk($userKeys, $subBatchSize, true);
+        $allGrouped = [];
+
+        foreach ($userKeyChunks as $userKeyChunk) {
+            $grouped = $this->fetchTouchpointsForUsers($userKeyChunk);
+            foreach ($grouped as $key => $touchpoints) {
+                $allGrouped[$key] = $touchpoints;
+            }
+        }
+
+        return $allGrouped;
+    }
+
+    /**
+     * Fetch touchpoints for a small batch of users.
+     */
+    private function fetchTouchpointsForUsers(array $userKeys): array
+    {
         if (empty($userKeys)) {
             return [];
         }
