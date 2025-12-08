@@ -434,6 +434,7 @@
         if (!eventData) {
             return;
         }
+        console.log(eventData)
 
         const user = getUserProperties();
         let currency = captureCurrencyFromEvent(eventData);
