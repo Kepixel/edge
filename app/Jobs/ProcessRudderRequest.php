@@ -23,7 +23,7 @@ class ProcessRudderRequest implements ShouldQueue
      *
      * @var int
      */
-    public $tries = 10;
+    public $tries = 20;
 
     /**
      * The maximum number of seconds the job can run.

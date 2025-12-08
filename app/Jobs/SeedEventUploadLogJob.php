@@ -14,7 +14,7 @@ class SeedEventUploadLogJob implements ShouldQueue
     /**
      * The number of times the job may be attempted.
      */
-    public int $tries = 5;
+    public int $tries = 20;
 
     /**
      * The number of seconds to wait before retrying the job.
