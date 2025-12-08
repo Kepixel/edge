@@ -127,7 +127,8 @@ class BackfillProcessAttributionDirectCommand extends Command
 
     private function processJourneys(int $chunkSize, ?string $fromDate, ?string $toDate, ?string $teamId, bool $skipExisting, bool $dryRun): void
     {
-        $this->info('Step 1/3: Building User Journeys...');
+        $this->newLine();
+        $this->info('=== Step 1/3: Building User Journeys ===');
 
         $where = $this->buildWhereClause($fromDate, $toDate, $teamId, 'event_timestamp');
         $total = $this->withRetry(
@@ -136,59 +137,87 @@ class BackfillProcessAttributionDirectCommand extends Command
         );
 
         if ($total === 0) {
-            $this->info('  -> No events to process');
+            $this->warn('No events to process.');
             return;
         }
 
-        $this->info("  -> Processing {$total} events");
+        $this->info("Total events to process: " . number_format($total));
+        $this->info("Chunk size: " . number_format($chunkSize));
+        $this->newLine();
 
         $progressBar = $this->output->createProgressBar($total);
+        $progressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% | Elapsed: %elapsed:6s% | ETA: %remaining:-6s%');
         $progressBar->start();
 
         $offset = 0;
+        $processedEvents = 0;
         $processedUsers = 0;
+        $processedTouchpoints = 0;
+        $failedBatches = 0;
+
+        // Get conversion events config (cached)
+        $conversionEvents = $this->getConversionEvents();
 
         while ($offset < $total) {
-            $events = $this->withRetry(
-                fn() => $this->fetchEnrichedEvents($where, $offset, $chunkSize, $skipExisting),
-                'fetch events'
-            );
-
-            if (empty($events)) {
-                break;
-            }
-
-            // Group by user
-            $groupedEvents = $this->groupEventsByUser($events);
-
-            // Get conversion events config
-            $conversionEvents = $this->getConversionEvents();
-
-            // Process each user
-            $touchpointRows = [];
-            foreach ($groupedEvents as $teamIdKey => $userEvents) {
-                foreach ($userEvents as $resolvedUserId => $userEventList) {
-                    $touchpoints = $this->buildUserTouchpoints($teamIdKey, $resolvedUserId, $userEventList, $conversionEvents);
-                    $touchpointRows = array_merge($touchpointRows, $touchpoints);
-                    $processedUsers++;
-                }
-            }
-
-            // Insert touchpoints with retry
-            if (!$dryRun && !empty($touchpointRows)) {
-                $this->withRetry(
-                    fn() => $this->insertTouchpoints($touchpointRows),
-                    'insert touchpoints'
+            try {
+                $events = $this->withRetry(
+                    fn() => $this->fetchEnrichedEvents($where, $offset, $chunkSize, $skipExisting),
+                    'fetch events'
                 );
-            }
 
-            $progressBar->advance(count($events));
-            $offset += $chunkSize;
+                if (empty($events)) {
+                    break;
+                }
+
+                // Group by user
+                $groupedEvents = $this->groupEventsByUser($events);
+
+                // Process each user
+                $touchpointRows = [];
+                foreach ($groupedEvents as $teamIdKey => $userEvents) {
+                    foreach ($userEvents as $resolvedUserId => $userEventList) {
+                        $touchpoints = $this->buildUserTouchpoints($teamIdKey, $resolvedUserId, $userEventList, $conversionEvents);
+                        $touchpointRows = array_merge($touchpointRows, $touchpoints);
+                        $processedUsers++;
+                    }
+                }
+
+                // Insert touchpoints with retry
+                if (!$dryRun && !empty($touchpointRows)) {
+                    $this->withRetry(
+                        fn() => $this->insertTouchpoints($touchpointRows),
+                        'insert touchpoints'
+                    );
+                    $processedTouchpoints += count($touchpointRows);
+                }
+
+                $batchCount = count($events);
+                $processedEvents += $batchCount;
+                $progressBar->advance($batchCount);
+                $offset += $chunkSize;
+
+            } catch (Throwable $e) {
+                $failedBatches++;
+                $this->newLine();
+                $this->error("Error at offset {$offset}: " . $e->getMessage());
+                Log::error('BackfillProcessAttribution: Journey error', [
+                    'offset' => $offset,
+                    'error' => $e->getMessage(),
+                ]);
+                $offset += $chunkSize;
+            }
         }
 
         $progressBar->finish();
-        $this->newLine();
-        $this->info("  -> Built journeys for {$processedUsers} users");
+        $this->newLine(2);
+
+        $this->info("=== Journeys Summary ===");
+        $this->table(['Metric', 'Count'], [
+            ['Events processed', number_format($processedEvents)],
+            ['Users processed', number_format($processedUsers)],
+            ['Touchpoints created', number_format($processedTouchpoints)],
+            ['Failed batches', number_format($failedBatches)],
+        ]);
     }
 
     private function countEvents(string $where, bool $skipExisting = false): int
@@ -538,7 +567,8 @@ class BackfillProcessAttributionDirectCommand extends Command
 
     private function processAttribution(int $chunkSize, ?string $fromDate, ?string $toDate, ?string $teamId, bool $skipExisting, bool $dryRun): void
     {
-        $this->info('Step 2/3: Calculating Attribution...');
+        $this->newLine();
+        $this->info('=== Step 2/3: Calculating Attribution ===');
 
         $where = $this->buildWhereClause($fromDate, $toDate, $teamId, 'touchpoint_timestamp');
         $where .= " AND is_conversion = 1";
@@ -548,92 +578,119 @@ class BackfillProcessAttributionDirectCommand extends Command
         );
 
         if ($total === 0) {
-            $this->info('  -> No conversions to process');
+            $this->warn('No conversions to process.');
             return;
         }
 
-        $this->info("  -> Processing {$total} conversions");
+        $this->info("Total conversions to process: " . number_format($total));
+        $this->info("Chunk size: " . number_format($chunkSize));
+        $this->newLine();
 
         $progressBar = $this->output->createProgressBar($total);
+        $progressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% | Elapsed: %elapsed:6s% | ETA: %remaining:-6s%');
         $progressBar->start();
 
-        // Get platform configs
+        // Get platform configs (cached)
         $platformConfigs = $this->getPlatformConfigs();
 
         $offset = 0;
         $processedConversions = 0;
+        $platformResultsCount = 0;
+        $deduplicatedResultsCount = 0;
+        $failedBatches = 0;
 
         while ($offset < $total) {
-            $conversions = $this->withRetry(
-                fn() => $this->fetchConversions($where, $offset, $chunkSize, $skipExisting),
-                'fetch conversions'
-            );
+            try {
+                $conversions = $this->withRetry(
+                    fn() => $this->fetchConversions($where, $offset, $chunkSize, $skipExisting),
+                    'fetch conversions'
+                );
 
-            if (empty($conversions)) {
-                break;
-            }
+                if (empty($conversions)) {
+                    break;
+                }
 
-            // Batch fetch all touchpoints for all conversions in this chunk
-            $allTouchpoints = $this->withRetry(
-                fn() => $this->batchFetchUserTouchpoints($conversions),
-                'batch fetch user touchpoints'
-            );
+                // Batch fetch all touchpoints for all conversions in this chunk
+                $allTouchpoints = $this->withRetry(
+                    fn() => $this->batchFetchUserTouchpoints($conversions),
+                    'batch fetch user touchpoints'
+                );
 
-            $platformResults = [];
-            $deduplicatedResults = [];
+                $platformResults = [];
+                $deduplicatedResults = [];
 
-            foreach ($conversions as $conversion) {
-                $userKey = "{$conversion['team_id']}:{$conversion['resolved_user_id']}";
-                $conversionTime = strtotime($conversion['touchpoint_timestamp']);
+                foreach ($conversions as $conversion) {
+                    $userKey = "{$conversion['team_id']}:{$conversion['resolved_user_id']}";
+                    $conversionTime = strtotime($conversion['touchpoint_timestamp']);
 
-                // Filter touchpoints for this user that are before the conversion
-                $touchpoints = [];
-                if (isset($allTouchpoints[$userKey])) {
-                    foreach ($allTouchpoints[$userKey] as $tp) {
-                        if (strtotime($tp['touchpoint_timestamp']) < $conversionTime) {
-                            $touchpoints[] = $tp;
+                    // Filter touchpoints for this user that are before the conversion
+                    $touchpoints = [];
+                    if (isset($allTouchpoints[$userKey])) {
+                        foreach ($allTouchpoints[$userKey] as $tp) {
+                            if (strtotime($tp['touchpoint_timestamp']) < $conversionTime) {
+                                $touchpoints[] = $tp;
+                            }
                         }
+                    }
+
+                    if (!empty($touchpoints)) {
+                        // Calculate both views
+                        $platformResults = array_merge(
+                            $platformResults,
+                            $this->calculatePlatformView($touchpoints, $conversion, $platformConfigs)
+                        );
+                        $deduplicatedResults = array_merge(
+                            $deduplicatedResults,
+                            $this->calculateDeduplicatedView($touchpoints, $conversion, $platformConfigs)
+                        );
+                    }
+
+                    $processedConversions++;
+                }
+
+                // Insert results with retry
+                if (!$dryRun) {
+                    if (!empty($platformResults)) {
+                        $this->withRetry(
+                            fn() => $this->insertAttributionResults($platformResults, 'platform'),
+                            'insert platform results'
+                        );
+                        $platformResultsCount += count($platformResults);
+                    }
+                    if (!empty($deduplicatedResults)) {
+                        $this->withRetry(
+                            fn() => $this->insertAttributionResults($deduplicatedResults, 'deduplicated'),
+                            'insert deduplicated results'
+                        );
+                        $deduplicatedResultsCount += count($deduplicatedResults);
                     }
                 }
 
-                if (!empty($touchpoints)) {
-                    // Calculate both views
-                    $platformResults = array_merge(
-                        $platformResults,
-                        $this->calculatePlatformView($touchpoints, $conversion, $platformConfigs)
-                    );
-                    $deduplicatedResults = array_merge(
-                        $deduplicatedResults,
-                        $this->calculateDeduplicatedView($touchpoints, $conversion, $platformConfigs)
-                    );
-                }
+                $progressBar->advance(count($conversions));
+                $offset += $chunkSize;
 
-                $processedConversions++;
+            } catch (Throwable $e) {
+                $failedBatches++;
+                $this->newLine();
+                $this->error("Error at offset {$offset}: " . $e->getMessage());
+                Log::error('BackfillProcessAttribution: Attribution error', [
+                    'offset' => $offset,
+                    'error' => $e->getMessage(),
+                ]);
+                $offset += $chunkSize;
             }
-
-            // Insert results with retry
-            if (!$dryRun) {
-                if (!empty($platformResults)) {
-                    $this->withRetry(
-                        fn() => $this->insertAttributionResults($platformResults, 'platform'),
-                        'insert platform results'
-                    );
-                }
-                if (!empty($deduplicatedResults)) {
-                    $this->withRetry(
-                        fn() => $this->insertAttributionResults($deduplicatedResults, 'deduplicated'),
-                        'insert deduplicated results'
-                    );
-                }
-            }
-
-            $progressBar->advance(count($conversions));
-            $offset += $chunkSize;
         }
 
         $progressBar->finish();
-        $this->newLine();
-        $this->info("  -> Calculated attribution for {$processedConversions} conversions");
+        $this->newLine(2);
+
+        $this->info("=== Attribution Summary ===");
+        $this->table(['Metric', 'Count'], [
+            ['Conversions processed', number_format($processedConversions)],
+            ['Platform attributions', number_format($platformResultsCount)],
+            ['Deduplicated attributions', number_format($deduplicatedResultsCount)],
+            ['Failed batches', number_format($failedBatches)],
+        ]);
     }
 
     private function countConversions(string $where, bool $skipExisting = false): int
@@ -1192,7 +1249,8 @@ class BackfillProcessAttributionDirectCommand extends Command
 
     private function processSummaries(int $chunkSize, ?string $fromDate, ?string $toDate, ?string $teamId, bool $dryRun): void
     {
-        $this->info('Step 3/3: Updating Journey Summaries...');
+        $this->newLine();
+        $this->info('=== Step 3/3: Updating Journey Summaries ===');
 
         $where = $this->buildWhereClause($fromDate, $toDate, $teamId, 'touchpoint_timestamp');
 
@@ -1206,45 +1264,68 @@ class BackfillProcessAttributionDirectCommand extends Command
         $total = count($users);
 
         if ($total === 0) {
-            $this->info('  -> No users to update');
+            $this->warn('No users to update.');
             return;
         }
 
-        $this->info("  -> Updating summaries for {$total} users");
+        $this->info("Total users to process: " . number_format($total));
+        $this->info("Chunk size: " . number_format($chunkSize));
+        $this->newLine();
 
         $progressBar = $this->output->createProgressBar($total);
+        $progressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% | Elapsed: %elapsed:6s% | ETA: %remaining:-6s%');
         $progressBar->start();
 
         $chunks = array_chunk($users, $chunkSize);
-        $processedCount = 0;
+        $processedUsers = 0;
+        $summariesCreated = 0;
+        $failedBatches = 0;
 
         foreach ($chunks as $chunk) {
-            $summaries = [];
+            try {
+                $summaries = [];
 
-            foreach ($chunk as $user) {
-                $summary = $this->withRetry(
-                    fn() => $this->buildUserSummary($user['team_id'], $user['resolved_user_id']),
-                    'build user summary'
-                );
-                if ($summary) {
-                    $summaries[] = $summary;
+                foreach ($chunk as $user) {
+                    $summary = $this->withRetry(
+                        fn() => $this->buildUserSummary($user['team_id'], $user['resolved_user_id']),
+                        'build user summary'
+                    );
+                    if ($summary) {
+                        $summaries[] = $summary;
+                    }
                 }
-            }
 
-            if (!$dryRun && !empty($summaries)) {
-                $this->withRetry(
-                    fn() => $this->insertSummaries($summaries),
-                    'insert summaries'
-                );
-            }
+                if (!$dryRun && !empty($summaries)) {
+                    $this->withRetry(
+                        fn() => $this->insertSummaries($summaries),
+                        'insert summaries'
+                    );
+                    $summariesCreated += count($summaries);
+                }
 
-            $progressBar->advance(count($chunk));
-            $processedCount += count($chunk);
+                $progressBar->advance(count($chunk));
+                $processedUsers += count($chunk);
+
+            } catch (Throwable $e) {
+                $failedBatches++;
+                $this->newLine();
+                $this->error("Error processing chunk: " . $e->getMessage());
+                Log::error('BackfillProcessAttribution: Summaries error', [
+                    'error' => $e->getMessage(),
+                ]);
+                $progressBar->advance(count($chunk));
+            }
         }
 
         $progressBar->finish();
-        $this->newLine();
-        $this->info("  -> Updated {$processedCount} user summaries");
+        $this->newLine(2);
+
+        $this->info("=== Summaries Summary ===");
+        $this->table(['Metric', 'Count'], [
+            ['Users processed', number_format($processedUsers)],
+            ['Summaries created', number_format($summariesCreated)],
+            ['Failed batches', number_format($failedBatches)],
+        ]);
     }
 
     private function buildUserSummary(string $teamId, string $resolvedUserId): ?array

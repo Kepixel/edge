@@ -27,7 +27,7 @@ class BackfillEventEnrichedDirectCommand extends Command
 
     private Client $client;
 
-    private int $maxRetries = 3;
+    private int $maxRetries = 10;
 
     private int $retryDelay = 5; // seconds
 
