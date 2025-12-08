@@ -326,9 +326,87 @@ class ProcessEventEnrichedJob implements ShouldQueue
                 'platform',
             ]
             );
+
+            // Process identify events for identity mapping and user profiles
+            if ($this->eventType === 'identify') {
+                $this->processIdentifyEvent($client);
+            }
         } catch (Throwable $e) {
             report($e);
             throw $e;
+        }
+    }
+
+    /**
+     * Process identify event to extract identity mappings and user profiles.
+     */
+    private function processIdentifyEvent(Client $client): void
+    {
+        // 1. Insert identity mapping if both user_id and anonymous_id are present
+        if (!empty($this->userId) && !empty($this->anonymousId)) {
+            try {
+                $client->insert(
+                    'identity_mappings',
+                    [[
+                        $this->teamId,
+                        $this->anonymousId,
+                        $this->userId,
+                        $this->eventTimestamp,  // first_seen_at
+                        $this->eventTimestamp,  // last_seen_at
+                    ]],
+                    ['team_id', 'anonymous_id', 'user_id', 'first_seen_at', 'last_seen_at']
+                );
+            } catch (Throwable $e) {
+                // Log but don't fail the main job
+                report($e);
+            }
+        }
+
+        // 2. Extract and insert user profile from traits
+        $traits = $this->properties['traits'] ?? $this->properties;
+
+        // Only create profile if we have some identity
+        if (empty($this->userId) && empty($this->anonymousId)) {
+            return;
+        }
+
+        $canonicalUserId = $this->userId ?: 'anon_' . $this->anonymousId;
+
+        try {
+            $client->insert(
+                'user_profiles',
+                [[
+                    $this->teamId,
+                    $canonicalUserId,
+                    $traits['email'] ?? null,
+                    $traits['phone'] ?? null,
+                    $traits['name'] ?? null,
+                    $traits['username'] ?? null,
+                    $traits['firstName'] ?? $traits['first_name'] ?? null,
+                    $traits['lastName'] ?? $traits['last_name'] ?? null,
+                    $traits['avatar'] ?? null,
+                    $this->eventTimestamp,  // first_seen
+                    $this->eventTimestamp,  // last_seen
+                    json_encode($traits),   // all traits as JSON
+                ]],
+                [
+                    'team_id',
+                    'canonical_user_id',
+                    'email',
+                    'phone',
+                    'name',
+                    'username',
+                    'first_name',
+                    'last_name',
+                    'avatar',
+                    'first_seen',
+                    'last_seen',
+                    'traits',
+                ]
+            );
+        } catch (Throwable $e) {
+            // Log but don't fail the main job
+            report($e);
         }
     }
 
