@@ -130,9 +130,10 @@ class BackfillProcessAttributionDirectCommand extends Command
         $this->newLine();
         $this->info('=== Step 1/3: Building User Journeys ===');
 
-        $where = $this->buildWhereClause($fromDate, $toDate, $teamId, 'event_timestamp');
+        // Use cursor-based pagination instead of OFFSET (much faster for large datasets)
+        $baseWhere = $this->buildWhereClause($fromDate, $toDate, $teamId, 'event_timestamp');
         $total = $this->withRetry(
-            fn() => $this->countEvents($where, $skipExisting),
+            fn() => $this->countEvents($baseWhere, $skipExisting),
             'count events'
         );
 
@@ -143,13 +144,13 @@ class BackfillProcessAttributionDirectCommand extends Command
 
         $this->info("Total events to process: " . number_format($total));
         $this->info("Chunk size: " . number_format($chunkSize));
+        $this->info("Using cursor-based pagination (optimized)");
         $this->newLine();
 
         $progressBar = $this->output->createProgressBar($total);
         $progressBar->setFormat(' %current%/%max% [%bar%] %percent:3s%% | Elapsed: %elapsed:6s% | ETA: %remaining:-6s%');
         $progressBar->start();
 
-        $offset = 0;
         $processedEvents = 0;
         $processedUsers = 0;
         $processedTouchpoints = 0;
@@ -158,16 +159,25 @@ class BackfillProcessAttributionDirectCommand extends Command
         // Get conversion events config (cached)
         $conversionEvents = $this->getConversionEvents();
 
-        while ($offset < $total) {
+        // Cursor-based pagination: track last timestamp and message_id
+        $lastTimestamp = null;
+        $lastMessageId = null;
+
+        while ($processedEvents < $total) {
             try {
                 $events = $this->withRetry(
-                    fn() => $this->fetchEnrichedEvents($where, $offset, $chunkSize, $skipExisting),
+                    fn() => $this->fetchEnrichedEventsCursor($baseWhere, $chunkSize, $skipExisting, $lastTimestamp, $lastMessageId),
                     'fetch events'
                 );
 
                 if (empty($events)) {
                     break;
                 }
+
+                // Update cursor for next iteration
+                $lastEvent = end($events);
+                $lastTimestamp = $lastEvent['event_timestamp'];
+                $lastMessageId = $lastEvent['message_id'];
 
                 // Group by user
                 $groupedEvents = $this->groupEventsByUser($events);
@@ -194,17 +204,23 @@ class BackfillProcessAttributionDirectCommand extends Command
                 $batchCount = count($events);
                 $processedEvents += $batchCount;
                 $progressBar->advance($batchCount);
-                $offset += $chunkSize;
 
             } catch (Throwable $e) {
                 $failedBatches++;
                 $this->newLine();
-                $this->error("Error at offset {$offset}: " . $e->getMessage());
+                $this->error("Error at cursor {$lastTimestamp}: " . $e->getMessage());
                 Log::error('BackfillProcessAttribution: Journey error', [
-                    'offset' => $offset,
+                    'cursor' => $lastTimestamp,
                     'error' => $e->getMessage(),
                 ]);
-                $offset += $chunkSize;
+                // Skip this batch by advancing cursor
+                if ($lastTimestamp) {
+                    // Move forward by a small time window on error
+                    $lastTimestamp = date('Y-m-d H:i:s', strtotime($lastTimestamp) + 60);
+                    $lastMessageId = null;
+                } else {
+                    break; // Can't continue without a cursor
+                }
             }
         }
 
@@ -222,87 +238,197 @@ class BackfillProcessAttributionDirectCommand extends Command
 
     private function countEvents(string $where, bool $skipExisting = false): int
     {
-        if ($skipExisting) {
-            $sql = "
-                SELECT count() as cnt
-                FROM event_enriched e
-                {$where}
-                AND e.message_id NOT IN (SELECT source_message_id FROM user_touchpoints WHERE source_message_id != '')
-            ";
-        } else {
-            $sql = "SELECT count() as cnt FROM event_enriched {$where}";
-        }
+        // Note: skip-existing filtering is now done at fetch time using LEFT ANTI JOIN
+        // for better performance. Here we just count total events in the date range.
+        $sql = "SELECT count() as cnt FROM event_enriched e {$where}";
         $result = $this->client->select($sql);
         return (int) ($result->rows()[0]['cnt'] ?? 0);
     }
 
-    private function fetchEnrichedEvents(string $where, int $offset, int $limit, bool $skipExisting = false): array
+    /**
+     * Fetch enriched events using cursor-based pagination (much faster than OFFSET).
+     * Uses (event_timestamp, message_id) as cursor for consistent ordering.
+     */
+    private function fetchEnrichedEventsCursor(string $baseWhere, int $limit, bool $skipExisting, ?string $lastTimestamp, ?string $lastMessageId): array
     {
-        $skipClause = $skipExisting
-            ? "AND e.message_id NOT IN (SELECT source_message_id FROM user_touchpoints WHERE source_message_id != '')"
-            : '';
+        // Build cursor condition - uses indexed event_timestamp for fast seeks
+        $cursorCondition = '';
+        if ($lastTimestamp !== null) {
+            $escapedTs = addslashes($lastTimestamp);
+            $escapedMsgId = addslashes($lastMessageId ?? '');
+            // Use (timestamp, message_id) tuple comparison for deterministic ordering
+            $cursorCondition = "AND (e.event_timestamp, e.message_id) > ('{$escapedTs}', '{$escapedMsgId}')";
+        }
 
-        // Join with event_upload_logs to get properties for revenue extraction
-        // Revenue is extracted from properties JSON at query time
-        $sql = "
+        // Use LEFT ANTI JOIN for skip-existing (much faster than NOT IN subquery)
+        if ($skipExisting) {
+            $sql = "
+                SELECT
+                    e.team_id,
+                    e.source_id,
+                    e.event_name,
+                    e.event_type,
+                    e.user_id,
+                    e.anonymous_id,
+                    e.message_id,
+                    e.session_id,
+                    e.event_timestamp,
+                    e.page_url,
+                    e.page_path,
+                    e.page_domain,
+                    e.landing_referrer,
+                    e.landing_referring_domain,
+                    e.utm_source,
+                    e.utm_medium,
+                    e.utm_campaign,
+                    e.utm_content,
+                    e.utm_term,
+                    e.traffic_channel,
+                    e.platform,
+                    e.click_id,
+                    e.is_paid,
+                    e.is_direct
+                FROM event_enriched e
+                LEFT ANTI JOIN user_touchpoints t ON e.message_id = t.source_message_id
+                {$baseWhere}
+                {$cursorCondition}
+                ORDER BY e.event_timestamp ASC, e.message_id ASC
+                LIMIT {$limit}
+            ";
+        } else {
+            $sql = "
+                SELECT
+                    e.team_id,
+                    e.source_id,
+                    e.event_name,
+                    e.event_type,
+                    e.user_id,
+                    e.anonymous_id,
+                    e.message_id,
+                    e.session_id,
+                    e.event_timestamp,
+                    e.page_url,
+                    e.page_path,
+                    e.page_domain,
+                    e.landing_referrer,
+                    e.landing_referring_domain,
+                    e.utm_source,
+                    e.utm_medium,
+                    e.utm_campaign,
+                    e.utm_content,
+                    e.utm_term,
+                    e.traffic_channel,
+                    e.platform,
+                    e.click_id,
+                    e.is_paid,
+                    e.is_direct
+                FROM event_enriched e
+                {$baseWhere}
+                {$cursorCondition}
+                ORDER BY e.event_timestamp ASC, e.message_id ASC
+                LIMIT {$limit}
+            ";
+        }
+
+        $events = $this->client->select($sql)->rows();
+
+        // Batch fetch revenue data for conversion events only
+        if (!empty($events)) {
+            $events = $this->enrichWithRevenueData($events);
+        }
+
+        return $events;
+    }
+
+    /**
+     * Batch fetch revenue data for conversion events only.
+     * This is much faster than JOINing for all events.
+     */
+    private function enrichWithRevenueData(array $events): array
+    {
+        // Get conversion event names
+        $conversionEvents = $this->getConversionEvents();
+        $conversionEventNames = array_keys($conversionEvents);
+
+        // Find events that might have revenue (conversion events)
+        $conversionMessageIds = [];
+        foreach ($events as $event) {
+            if (in_array($event['event_name'], $conversionEventNames)) {
+                $conversionMessageIds[] = "'" . addslashes($event['message_id']) . "'";
+            }
+        }
+
+        // If no conversion events, return events with default revenue values
+        if (empty($conversionMessageIds)) {
+            foreach ($events as &$event) {
+                $event['conversion_value'] = 0;
+                $event['conversion_revenue'] = 0;
+                $event['conversion_currency'] = 'USD';
+                $event['order_id'] = '';
+            }
+            return $events;
+        }
+
+        // Batch query revenue data for conversion events only
+        $messageIdList = implode(',', $conversionMessageIds);
+        $revenueSql = "
             SELECT
-                e.team_id,
-                e.source_id,
-                e.event_name,
-                e.event_type,
-                e.user_id,
-                e.anonymous_id,
-                e.message_id,
-                e.session_id,
-                e.event_timestamp,
-                e.page_url,
-                e.page_path,
-                e.page_domain,
-                e.landing_referrer,
-                e.landing_referring_domain,
-                e.utm_source,
-                e.utm_medium,
-                e.utm_campaign,
-                e.utm_content,
-                e.utm_term,
-                e.traffic_channel,
-                e.platform,
-                e.click_id,
-                e.is_paid,
-                e.is_direct,
-                -- Extract revenue from event_upload_logs.properties
+                message_id,
                 coalesce(
-                    JSONExtractFloat(el.properties, 'properties', 'revenue'),
-                    JSONExtractFloat(el.properties, 'properties', 'total'),
-                    JSONExtractFloat(el.properties, 'properties', 'value'),
-                    JSONExtractFloat(el.properties, 'properties', 'purchase', 'actionField', 'revenue'),
+                    JSONExtractFloat(properties, 'properties', 'revenue'),
+                    JSONExtractFloat(properties, 'properties', 'total'),
+                    JSONExtractFloat(properties, 'properties', 'value'),
+                    JSONExtractFloat(properties, 'properties', 'purchase', 'actionField', 'revenue'),
                     0
                 ) as conversion_revenue,
                 coalesce(
-                    JSONExtractFloat(el.properties, 'properties', 'value'),
-                    JSONExtractFloat(el.properties, 'properties', 'total'),
-                    JSONExtractFloat(el.properties, 'properties', 'revenue'),
+                    JSONExtractFloat(properties, 'properties', 'value'),
+                    JSONExtractFloat(properties, 'properties', 'total'),
+                    JSONExtractFloat(properties, 'properties', 'revenue'),
                     0
                 ) as conversion_value,
                 coalesce(
-                    nullIf(JSONExtractString(el.properties, 'properties', 'currency'), ''),
+                    nullIf(JSONExtractString(properties, 'properties', 'currency'), ''),
                     'USD'
                 ) as conversion_currency,
                 coalesce(
-                    nullIf(JSONExtractString(el.properties, 'properties', 'order_id'), ''),
-                    nullIf(JSONExtractString(el.properties, 'properties', 'orderId'), ''),
-                    nullIf(JSONExtractString(el.properties, 'properties', 'transaction_id'), ''),
+                    nullIf(JSONExtractString(properties, 'properties', 'order_id'), ''),
+                    nullIf(JSONExtractString(properties, 'properties', 'orderId'), ''),
+                    nullIf(JSONExtractString(properties, 'properties', 'transaction_id'), ''),
                     ''
                 ) as order_id
-            FROM event_enriched e
-            LEFT JOIN event_upload_logs el ON e.message_id = el.message_id
-            {$where}
-            {$skipClause}
-            ORDER BY e.event_timestamp ASC
-            LIMIT {$limit} OFFSET {$offset}
+            FROM event_upload_logs
+            WHERE message_id IN ({$messageIdList})
         ";
 
-        return $this->client->select($sql)->rows();
+        $revenueData = [];
+        try {
+            $result = $this->client->select($revenueSql);
+            foreach ($result->rows() as $row) {
+                $revenueData[$row['message_id']] = $row;
+            }
+        } catch (Throwable $e) {
+            // If query fails, continue without revenue data
+            Log::warning('BackfillProcessAttribution: Revenue fetch failed', ['error' => $e->getMessage()]);
+        }
+
+        // Merge revenue data into events
+        foreach ($events as &$event) {
+            if (isset($revenueData[$event['message_id']])) {
+                $rev = $revenueData[$event['message_id']];
+                $event['conversion_value'] = (float) $rev['conversion_value'];
+                $event['conversion_revenue'] = (float) $rev['conversion_revenue'];
+                $event['conversion_currency'] = $rev['conversion_currency'];
+                $event['order_id'] = $rev['order_id'];
+            } else {
+                $event['conversion_value'] = 0;
+                $event['conversion_revenue'] = 0;
+                $event['conversion_currency'] = 'USD';
+                $event['order_id'] = '';
+            }
+        }
+
+        return $events;
     }
 
     private function groupEventsByUser(array $events): array
