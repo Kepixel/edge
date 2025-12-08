@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\ProcessEventEnrichedBatchJob;
 use App\Jobs\ProcessEventEnrichedJob;
 use ClickHouseDB\Client;
 use Illuminate\Console\Command;
@@ -25,7 +26,8 @@ class BackfillEventEnrichedCommand extends Command
                             {--dry-run : Show what would be processed without actually dispatching jobs}
                             {--resume : Resume from last processed position}
                             {--reset : Reset progress tracking and start fresh}
-                            {--timeout=30 : ClickHouse query timeout in seconds}';
+                            {--timeout=30 : ClickHouse query timeout in seconds}
+                            {--single : Use single-event jobs instead of batch (slower, for debugging)}';
 
     /**
      * The console command description.
@@ -115,6 +117,15 @@ class BackfillEventEnrichedCommand extends Command
             $this->info("\nLoaded " . count($existingMessageIds) . " existing message IDs to skip");
         }
 
+        // Check if using single-event mode (slower, for debugging)
+        $useSingleMode = $this->option('single');
+
+        if ($useSingleMode) {
+            $this->info('Using SINGLE-EVENT mode (slower)');
+        } else {
+            $this->info('Using BATCH mode (faster)');
+        }
+
         // Process in batches
         $hasMore = true;
         while ($hasMore) {
@@ -126,6 +137,8 @@ class BackfillEventEnrichedCommand extends Command
                     break;
                 }
 
+                // Filter out existing events if skip-existing is enabled
+                $rowsToProcess = [];
                 foreach ($rows as $row) {
                     $messageId = $row['message_id'] ?? null;
 
@@ -137,21 +150,35 @@ class BackfillEventEnrichedCommand extends Command
                         continue;
                     }
 
-                    if (!$dryRun) {
-                        $dispatched = $this->dispatchEnrichmentJob($row, $queue);
-                        if (!$dispatched) {
-                            // Row has invalid data (missing team_id, source_id, etc.)
-                            $this->skipped++;
-                            $progressBar->setMessage((string) $this->skipped, 'skipped');
-                            $progressBar->advance();
-                            continue;
-                        }
+                    // Skip rows with missing required fields
+                    if (empty($row['team_id']) || empty($row['source_id']) || empty($row['event_timestamp'])) {
+                        $this->skipped++;
+                        $progressBar->setMessage((string) $this->skipped, 'skipped');
+                        $progressBar->advance();
+                        continue;
                     }
 
-                    $this->processed++;
-                    $progressBar->setMessage((string) $this->processed, 'processed');
-                    $progressBar->advance();
+                    $rowsToProcess[] = $row;
                 }
+
+                // Dispatch jobs
+                if (!$dryRun && !empty($rowsToProcess)) {
+                    if ($useSingleMode) {
+                        // Single-event mode: dispatch one job per row (original behavior)
+                        foreach ($rowsToProcess as $row) {
+                            $this->dispatchEnrichmentJob($row, $queue);
+                        }
+                    } else {
+                        // Batch mode: dispatch one job for entire batch
+                        $this->dispatchBatchJob($rowsToProcess, $queue);
+                    }
+                }
+
+                // Update progress
+                $batchProcessed = count($rowsToProcess);
+                $this->processed += $batchProcessed;
+                $progressBar->setMessage((string) $this->processed, 'processed');
+                $progressBar->advance($batchProcessed);
 
                 $offset += $chunkSize;
 
@@ -323,6 +350,14 @@ class BackfillEventEnrichedCommand extends Command
         );
 
         return true;
+    }
+
+    /**
+     * Dispatch a batch job for multiple rows.
+     */
+    private function dispatchBatchJob(array $rows, string $queue): void
+    {
+        ProcessEventEnrichedBatchJob::dispatch($rows)->onQueue($queue);
     }
 
     /**
