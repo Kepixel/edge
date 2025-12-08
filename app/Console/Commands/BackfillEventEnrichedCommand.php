@@ -308,7 +308,7 @@ class BackfillEventEnrichedCommand extends Command
 
         $properties = json_decode($row['properties'] ?? '{}', true) ?: [];
 
-        ProcessEventEnrichedJob::dispatchSync(
+        ProcessEventEnrichedJob::dispatch(
             teamId: (string) $teamId,
             sourceId: (string) $sourceId,
             eventName: $row['event_name'] ?? 'unknown',
