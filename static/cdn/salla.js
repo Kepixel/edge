@@ -434,7 +434,11 @@
         if (!eventData) {
             return;
         }
-        console.log(eventData)
+
+        if (!eventData?.event) {
+            console.warn("Invalid event", eventData);
+            return;
+        }
 
         const user = getUserProperties();
         let currency = captureCurrencyFromEvent(eventData);
