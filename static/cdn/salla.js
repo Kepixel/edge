@@ -436,7 +436,6 @@
         }
 
         if (!eventData?.event) {
-            console.warn("Invalid event", eventData);
             return;
         }
 
