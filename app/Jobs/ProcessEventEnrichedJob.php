@@ -15,7 +15,7 @@ class ProcessEventEnrichedJob implements ShouldQueue
     /**
      * The number of times the job may be attempted.
      */
-    public int $tries = 10;
+    public int $tries = 0;
 
     /**
      * The number of seconds the job can run before timing out.
