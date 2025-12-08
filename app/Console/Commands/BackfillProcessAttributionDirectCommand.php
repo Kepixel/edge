@@ -15,12 +15,13 @@ use Throwable;
 class BackfillProcessAttributionDirectCommand extends Command
 {
     protected $signature = 'attribution:backfill-process-direct
-                            {--chunk=5000 : Number of events to process per batch}
+                            {--chunk=50000 : Number of events to process per batch}
                             {--from= : Start from specific date (Y-m-d)}
                             {--to= : End at specific date (Y-m-d)}
                             {--team= : Filter by specific team_id}
                             {--step= : Run only specific step (journeys|attribution|summaries)}
                             {--skip-existing : Skip events/conversions that already exist}
+                            {--parallel=4 : Number of parallel date ranges to process}
                             {--dry-run : Show what would be processed without inserting}';
 
     protected $description = 'Process attribution directly via ClickHouse (fastest method for backfill)';
@@ -28,6 +29,11 @@ class BackfillProcessAttributionDirectCommand extends Command
     private Client $client;
     private int $maxRetries = 3;
     private int $retryDelay = 5; // seconds
+
+    // Caches for performance
+    private array $identityCache = [];
+    private array $conversionEventsCache = [];
+    private array $platformConfigsCache = [];
 
     // Attribution models
     private const MODEL_LAST_CLICK = 'last_click';
@@ -245,6 +251,9 @@ class BackfillProcessAttributionDirectCommand extends Command
 
     private function groupEventsByUser(array $events): array
     {
+        // Batch preload identity mappings for all anonymous IDs in this batch
+        $this->preloadIdentityMappings($events);
+
         $grouped = [];
 
         foreach ($events as $event) {
@@ -252,8 +261,8 @@ class BackfillProcessAttributionDirectCommand extends Command
             $userId = $event['user_id'] ?? '';
             $anonymousId = $event['anonymous_id'] ?? '';
 
-            // Resolve identity
-            $resolvedUserId = $this->resolveIdentity($teamId, $userId, $anonymousId);
+            // Resolve identity using cache
+            $resolvedUserId = $this->resolveIdentityCached($teamId, $userId, $anonymousId);
 
             if (!isset($grouped[$teamId])) {
                 $grouped[$teamId] = [];
@@ -269,32 +278,92 @@ class BackfillProcessAttributionDirectCommand extends Command
         return $grouped;
     }
 
-    private function resolveIdentity(string $teamId, string $userId, string $anonymousId): string
+    /**
+     * Batch preload identity mappings for all anonymous IDs in the events batch.
+     * This eliminates N+1 queries by loading all mappings in a single query.
+     */
+    private function preloadIdentityMappings(array $events): void
+    {
+        // Collect unique team_id + anonymous_id combinations that need lookup
+        $lookups = [];
+        foreach ($events as $event) {
+            $userId = $event['user_id'] ?? '';
+            $anonymousId = $event['anonymous_id'] ?? '';
+            $teamId = $event['team_id'] ?? '';
+
+            // Only need to lookup if no user_id and has anonymous_id
+            if (empty($userId) && !empty($anonymousId) && !empty($teamId)) {
+                $cacheKey = "{$teamId}:{$anonymousId}";
+                if (!isset($this->identityCache[$cacheKey]) && !isset($lookups[$cacheKey])) {
+                    $lookups[$cacheKey] = ['team_id' => $teamId, 'anonymous_id' => $anonymousId];
+                }
+            }
+        }
+
+        if (empty($lookups)) {
+            return;
+        }
+
+        // Build batch query using tuples
+        $tuples = [];
+        foreach ($lookups as $lookup) {
+            $teamId = addslashes($lookup['team_id']);
+            $anonymousId = addslashes($lookup['anonymous_id']);
+            $tuples[] = "('{$teamId}', '{$anonymousId}')";
+        }
+
+        $tuplesStr = implode(',', $tuples);
+
+        try {
+            $sql = "
+                SELECT team_id, anonymous_id, user_id
+                FROM identity_mappings
+                WHERE (team_id, anonymous_id) IN ({$tuplesStr})
+                AND user_id != ''
+                ORDER BY team_id, anonymous_id, last_seen_at DESC
+            ";
+
+            $result = $this->client->select($sql);
+
+            // Process results - take first (most recent) for each team+anonymous combo
+            $seen = [];
+            foreach ($result->rows() as $row) {
+                $cacheKey = "{$row['team_id']}:{$row['anonymous_id']}";
+                if (!isset($seen[$cacheKey])) {
+                    $this->identityCache[$cacheKey] = $row['user_id'];
+                    $seen[$cacheKey] = true;
+                }
+            }
+
+            // Mark lookups that had no result as checked (to avoid re-querying)
+            foreach ($lookups as $cacheKey => $lookup) {
+                if (!isset($this->identityCache[$cacheKey])) {
+                    $this->identityCache[$cacheKey] = null; // null means "no mapping found"
+                }
+            }
+        } catch (Throwable $e) {
+            // Table might not exist - mark all as no mapping
+            foreach ($lookups as $cacheKey => $lookup) {
+                $this->identityCache[$cacheKey] = null;
+            }
+        }
+    }
+
+    /**
+     * Resolve identity using the preloaded cache.
+     */
+    private function resolveIdentityCached(string $teamId, string $userId, string $anonymousId): string
     {
         if (!empty($userId)) {
             return $userId;
         }
 
         if (!empty($anonymousId)) {
-            // Check identity mappings
-            $sql = "
-                SELECT user_id
-                FROM identity_mappings
-                WHERE team_id = '{$teamId}'
-                AND anonymous_id = '{$anonymousId}'
-                ORDER BY last_seen_at DESC
-                LIMIT 1
-            ";
+            $cacheKey = "{$teamId}:{$anonymousId}";
 
-            try {
-                $result = $this->client->select($sql);
-                $rows = $result->rows();
-
-                if (!empty($rows) && !empty($rows[0]['user_id'])) {
-                    return $rows[0]['user_id'];
-                }
-            } catch (Throwable $e) {
-                // Table might not exist
+            // Check cache (null means "checked but no mapping found")
+            if (isset($this->identityCache[$cacheKey]) && $this->identityCache[$cacheKey] !== null) {
+                return $this->identityCache[$cacheKey];
             }
 
             return 'anon_' . $anonymousId;
@@ -305,6 +374,11 @@ class BackfillProcessAttributionDirectCommand extends Command
 
     private function getConversionEvents(): array
     {
+        // Return cached if available
+        if (!empty($this->conversionEventsCache)) {
+            return $this->conversionEventsCache;
+        }
+
         try {
             $sql = "SELECT event_name, score FROM conversion_events_config_default";
             $result = $this->client->select($sql);
@@ -313,14 +387,17 @@ class BackfillProcessAttributionDirectCommand extends Command
             foreach ($result->rows() as $row) {
                 $events[$row['event_name']] = ['score' => (float) $row['score']];
             }
+
+            $this->conversionEventsCache = $events;
             return $events;
         } catch (Throwable $e) {
-            return [
+            $this->conversionEventsCache = [
                 'purchase' => ['score' => 1.0],
                 'order_completed' => ['score' => 1.0],
                 'sign_up' => ['score' => 0.5],
                 'lead' => ['score' => 0.3],
             ];
+            return $this->conversionEventsCache;
         }
     }
 
@@ -496,19 +573,28 @@ class BackfillProcessAttributionDirectCommand extends Command
                 break;
             }
 
+            // Batch fetch all touchpoints for all conversions in this chunk
+            $allTouchpoints = $this->withRetry(
+                fn() => $this->batchFetchUserTouchpoints($conversions),
+                'batch fetch user touchpoints'
+            );
+
             $platformResults = [];
             $deduplicatedResults = [];
 
             foreach ($conversions as $conversion) {
-                // Get touchpoints for this user with retry
-                $touchpoints = $this->withRetry(
-                    fn() => $this->fetchUserTouchpoints(
-                        $conversion['team_id'],
-                        $conversion['resolved_user_id'],
-                        $conversion['touchpoint_timestamp']
-                    ),
-                    'fetch user touchpoints'
-                );
+                $userKey = "{$conversion['team_id']}:{$conversion['resolved_user_id']}";
+                $conversionTime = strtotime($conversion['touchpoint_timestamp']);
+
+                // Filter touchpoints for this user that are before the conversion
+                $touchpoints = [];
+                if (isset($allTouchpoints[$userKey])) {
+                    foreach ($allTouchpoints[$userKey] as $tp) {
+                        if (strtotime($tp['touchpoint_timestamp']) < $conversionTime) {
+                            $touchpoints[] = $tp;
+                        }
+                    }
+                }
 
                 if (!empty($touchpoints)) {
                     // Calculate both views
@@ -594,22 +680,71 @@ class BackfillProcessAttributionDirectCommand extends Command
         return $this->client->select($sql)->rows();
     }
 
-    private function fetchUserTouchpoints(string $teamId, string $resolvedUserId, string $beforeTimestamp): array
+    /**
+     * Batch fetch all touchpoints for multiple conversions in a single query.
+     * Returns touchpoints grouped by team_id:resolved_user_id key.
+     */
+    private function batchFetchUserTouchpoints(array $conversions): array
     {
+        if (empty($conversions)) {
+            return [];
+        }
+
+        // Collect unique team_id + resolved_user_id combinations
+        $userKeys = [];
+        foreach ($conversions as $conversion) {
+            $userKey = "{$conversion['team_id']}:{$conversion['resolved_user_id']}";
+            if (!isset($userKeys[$userKey])) {
+                $userKeys[$userKey] = [
+                    'team_id' => $conversion['team_id'],
+                    'resolved_user_id' => $conversion['resolved_user_id'],
+                ];
+            }
+        }
+
+        if (empty($userKeys)) {
+            return [];
+        }
+
+        // Build batch query using tuples
+        $tuples = [];
+        foreach ($userKeys as $user) {
+            $teamId = addslashes($user['team_id']);
+            $resolvedUserId = addslashes($user['resolved_user_id']);
+            $tuples[] = "('{$teamId}', '{$resolvedUserId}')";
+        }
+
+        $tuplesStr = implode(',', $tuples);
+
         $sql = "
             SELECT *
             FROM user_touchpoints
-            WHERE team_id = '{$teamId}'
-            AND resolved_user_id = '{$resolvedUserId}'
-            AND touchpoint_timestamp < '{$beforeTimestamp}'
-            ORDER BY touchpoint_timestamp ASC
+            WHERE (team_id, resolved_user_id) IN ({$tuplesStr})
+            ORDER BY team_id, resolved_user_id, touchpoint_timestamp ASC
         ";
 
-        return $this->client->select($sql)->rows();
+        $result = $this->client->select($sql)->rows();
+
+        // Group by team_id:resolved_user_id
+        $grouped = [];
+        foreach ($result as $row) {
+            $key = "{$row['team_id']}:{$row['resolved_user_id']}";
+            if (!isset($grouped[$key])) {
+                $grouped[$key] = [];
+            }
+            $grouped[$key][] = $row;
+        }
+
+        return $grouped;
     }
 
     private function getPlatformConfigs(): array
     {
+        // Return cached if available
+        if (!empty($this->platformConfigsCache)) {
+            return $this->platformConfigsCache;
+        }
+
         try {
             $sql = "SELECT platform, click_window_days, view_window_days, priority, model FROM ad_platform_config_default";
             $result = $this->client->select($sql);
@@ -624,9 +759,11 @@ class BackfillProcessAttributionDirectCommand extends Command
                     'model' => $row['model'],
                 ];
             }
+
+            $this->platformConfigsCache = $configs;
             return $configs;
         } catch (Throwable $e) {
-            return [
+            $this->platformConfigsCache = [
                 'default' => [
                     'platform' => 'default',
                     'click_window_days' => 30,
@@ -635,6 +772,7 @@ class BackfillProcessAttributionDirectCommand extends Command
                     'model' => 'last_click',
                 ],
             ];
+            return $this->platformConfigsCache;
         }
     }
 
