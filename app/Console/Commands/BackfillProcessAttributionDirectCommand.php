@@ -608,10 +608,28 @@ class BackfillProcessAttributionDirectCommand extends Command
         // This does everything in ClickHouse - MUCH faster than PHP processing
         $this->info('Inserting last-click attributions...');
 
+        // Columns in order: conversion_date, team_id, resolved_user_id, conversion_timestamp, conversion_event,
+        // conversion_value, conversion_revenue, conversion_currency, conversion_score, order_id, conversion_message_id,
+        // touchpoint_number, touchpoint_timestamp, touchpoint_message_id, platform, traffic_channel,
+        // utm_source, utm_medium, utm_campaign, utm_content, utm_term, click_id, is_paid,
+        // attribution_type, model, attribution_credit, attributed_value, attributed_revenue, attributed_score,
+        // is_assisted, assisted_value, assisted_revenue, days_to_conversion, hours_to_conversion,
+        // within_click_window, within_view_window, platform_priority, platform_click_window, platform_view_window,
+        // is_first_touch, is_last_touch, total_touchpoints
+
         $insertSql = "
-            INSERT INTO attributed_conversions
+            INSERT INTO attributed_conversions (
+                conversion_date, team_id, resolved_user_id, conversion_timestamp, conversion_event,
+                conversion_value, conversion_revenue, conversion_currency, conversion_score, order_id, conversion_message_id,
+                touchpoint_number, touchpoint_timestamp, touchpoint_message_id, platform, traffic_channel,
+                utm_source, utm_medium, utm_campaign, utm_content, utm_term, click_id, is_paid,
+                attribution_type, model, attribution_credit, attributed_value, attributed_revenue, attributed_score,
+                is_assisted, assisted_value, assisted_revenue, days_to_conversion, hours_to_conversion,
+                within_click_window, within_view_window, platform_priority, platform_click_window, platform_view_window,
+                is_first_touch, is_last_touch, total_touchpoints
+            )
             SELECT
-                -- Conversion info
+                -- Conversion info (11 columns)
                 toDate(c.touchpoint_timestamp) as conversion_date,
                 c.team_id,
                 c.resolved_user_id,
@@ -624,7 +642,7 @@ class BackfillProcessAttributionDirectCommand extends Command
                 c.order_id,
                 c.message_id as conversion_message_id,
 
-                -- Last touchpoint info (using window function)
+                -- Last touchpoint info (12 columns)
                 last_tp.touchpoint_number,
                 last_tp.touchpoint_timestamp,
                 last_tp.message_id as touchpoint_message_id,
@@ -638,27 +656,27 @@ class BackfillProcessAttributionDirectCommand extends Command
                 last_tp.click_id,
                 last_tp.is_paid,
 
-                -- Attribution info
+                -- Attribution info (9 columns)
                 'deduplicated' as attribution_type,
                 'last_click' as model,
-                1.0 as attribution_credit,
+                toFloat64(1.0) as attribution_credit,
                 c.conversion_value as attributed_value,
                 c.conversion_revenue as attributed_revenue,
                 c.conversion_score as attributed_score,
-                0 as is_assisted,
-                0 as assisted_value,
-                0 as assisted_revenue,
+                toUInt8(0) as is_assisted,
+                toFloat64(0) as assisted_value,
+                toFloat64(0) as assisted_revenue,
 
-                -- Time calculations
+                -- Time calculations (10 columns)
                 dateDiff('day', last_tp.touchpoint_timestamp, c.touchpoint_timestamp) as days_to_conversion,
                 dateDiff('hour', last_tp.touchpoint_timestamp, c.touchpoint_timestamp) as hours_to_conversion,
-                1 as within_click_window,
-                1 as within_view_window,
-                1 as platform_priority,
-                30 as platform_click_window,
-                1 as platform_view_window,
-                if(last_tp.touchpoint_number = 1, 1, 0) as is_first_touch,
-                1 as is_last_touch,
+                toUInt8(1) as within_click_window,
+                toUInt8(1) as within_view_window,
+                toUInt8(1) as platform_priority,
+                toUInt16(30) as platform_click_window,
+                toUInt16(1) as platform_view_window,
+                if(last_tp.touchpoint_number = 1, toUInt8(1), toUInt8(0)) as is_first_touch,
+                toUInt8(1) as is_last_touch,
                 last_tp.total_touchpoints
 
             FROM user_touchpoints c
