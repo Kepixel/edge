@@ -48,8 +48,8 @@ class BackfillProcessAttributionDirectCommand extends Command
     public function handle(): int
     {
         $this->client = app(Client::class);
-        $this->client->setTimeout(600);
-        $this->client->setConnectTimeOut(60);
+        $this->client->setTimeout(600*4);
+        $this->client->setConnectTimeOut(60*4);
 
         $chunkSize = (int) $this->option('chunk');
         $fromDate = $this->option('from');
