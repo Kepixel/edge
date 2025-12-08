@@ -81,19 +81,19 @@ class SeedEventUploadLogJob implements ShouldQueue
         ]);
 
         // 3) dispatch enrichment for this single event
-        ProcessEventEnrichedJob::dispatch(
-            teamId: $this->source->team_id,
-            sourceId: $this->source->id,
-            eventName: $this->data['event'] ?? $this->data['type'] ?? 'unknown',
-            eventType: $this->data['type'] ?? 'track',
-            userId: $this->data['userId'] ?? null,
-            anonymousId: $this->data['anonymousId'] ?? null,
-            messageId: $this->data['messageId'] ?? null,
-            sessionId: $this->data['context']['sessionId'] ?? null,
-            rudderId: $this->data['rudderId'] ?? null,
-            properties: $this->data,
-            eventTimestamp: $eventTimestamp,
-        );
+//        ProcessEventEnrichedJob::dispatch(
+//            teamId: $this->source->team_id,
+//            sourceId: $this->source->id,
+//            eventName: $this->data['event'] ?? $this->data['type'] ?? 'unknown',
+//            eventType: $this->data['type'] ?? 'track',
+//            userId: $this->data['userId'] ?? null,
+//            anonymousId: $this->data['anonymousId'] ?? null,
+//            messageId: $this->data['messageId'] ?? null,
+//            sessionId: $this->data['context']['sessionId'] ?? null,
+//            rudderId: $this->data['rudderId'] ?? null,
+//            properties: $this->data,
+//            eventTimestamp: $eventTimestamp,
+//        );
     }
 
     /**
