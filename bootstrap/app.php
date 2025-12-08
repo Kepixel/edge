@@ -14,12 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withSchedule(function (Schedule $schedule): void {
-        // Attribution Pipeline - runs every 5 minutes
-        $schedule->command('attribution:process')
-            ->everyFiveMinutes()
-            ->withoutOverlapping()
-            ->runInBackground()
-            ->appendOutputTo(storage_path('logs/attribution.log'));
+
     })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies();
