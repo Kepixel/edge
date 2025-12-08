@@ -12,14 +12,15 @@ use Throwable;
  * Combines all three steps: Build Journeys -> Calculate Attribution -> Update Summaries
  * Uses the same logic as the individual jobs but processes in batches directly.
  */
-class ProcessAttributionDirectCommand extends Command
+class BackfillProcessAttributionDirectCommand extends Command
 {
-    protected $signature = 'attribution:process-direct
+    protected $signature = 'attribution:backfill-process-direct
                             {--chunk=5000 : Number of events to process per batch}
                             {--from= : Start from specific date (Y-m-d)}
                             {--to= : End at specific date (Y-m-d)}
                             {--team= : Filter by specific team_id}
                             {--step= : Run only specific step (journeys|attribution|summaries)}
+                            {--skip-existing : Skip events/conversions that already exist}
                             {--dry-run : Show what would be processed without inserting}';
 
     protected $description = 'Process attribution directly via ClickHouse (fastest method for backfill)';
@@ -53,6 +54,7 @@ class ProcessAttributionDirectCommand extends Command
         $toDate = $this->option('to');
         $teamId = $this->option('team');
         $step = $this->option('step');
+        $skipExisting = $this->option('skip-existing');
         $dryRun = $this->option('dry-run');
 
         $this->info('=== Attribution Direct Processing ===');
@@ -60,6 +62,7 @@ class ProcessAttributionDirectCommand extends Command
         if ($fromDate) $this->info("From: {$fromDate}");
         if ($toDate) $this->info("To: {$toDate}");
         if ($teamId) $this->info("Team: {$teamId}");
+        if ($skipExisting) $this->info("Skip existing: Yes");
         $this->info("Mode: " . ($dryRun ? 'DRY RUN' : 'DIRECT INSERT'));
         $this->newLine();
 
@@ -71,7 +74,7 @@ class ProcessAttributionDirectCommand extends Command
 
         try {
             foreach ($steps as $currentStep) {
-                $this->processStep($currentStep, $chunkSize, $fromDate, $toDate, $teamId, $dryRun);
+                $this->processStep($currentStep, $chunkSize, $fromDate, $toDate, $teamId, $skipExisting, $dryRun);
             }
 
             $this->newLine();
@@ -90,15 +93,15 @@ class ProcessAttributionDirectCommand extends Command
         }
     }
 
-    private function processStep(string $step, int $chunkSize, ?string $fromDate, ?string $toDate, ?string $teamId, bool $dryRun): void
+    private function processStep(string $step, int $chunkSize, ?string $fromDate, ?string $toDate, ?string $teamId, bool $skipExisting, bool $dryRun): void
     {
         switch ($step) {
             case 'journeys':
-                $this->processJourneys($chunkSize, $fromDate, $toDate, $teamId, $dryRun);
+                $this->processJourneys($chunkSize, $fromDate, $toDate, $teamId, $skipExisting, $dryRun);
                 break;
 
             case 'attribution':
-                $this->processAttribution($chunkSize, $fromDate, $toDate, $teamId, $dryRun);
+                $this->processAttribution($chunkSize, $fromDate, $toDate, $teamId, $skipExisting, $dryRun);
                 break;
 
             case 'summaries':
@@ -114,12 +117,12 @@ class ProcessAttributionDirectCommand extends Command
     // STEP 1: BUILD USER JOURNEYS
     // ============================================================
 
-    private function processJourneys(int $chunkSize, ?string $fromDate, ?string $toDate, ?string $teamId, bool $dryRun): void
+    private function processJourneys(int $chunkSize, ?string $fromDate, ?string $toDate, ?string $teamId, bool $skipExisting, bool $dryRun): void
     {
         $this->info('Step 1/3: Building User Journeys...');
 
         $where = $this->buildWhereClause($fromDate, $toDate, $teamId, 'event_timestamp');
-        $total = $this->countEvents($where);
+        $total = $this->countEvents($where, $skipExisting);
 
         if ($total === 0) {
             $this->info('  -> No events to process');
@@ -135,7 +138,7 @@ class ProcessAttributionDirectCommand extends Command
         $processedUsers = 0;
 
         while ($offset < $total) {
-            $events = $this->fetchEnrichedEvents($where, $offset, $chunkSize);
+            $events = $this->fetchEnrichedEvents($where, $offset, $chunkSize, $skipExisting);
 
             if (empty($events)) {
                 break;
@@ -171,44 +174,58 @@ class ProcessAttributionDirectCommand extends Command
         $this->info("  -> Built journeys for {$processedUsers} users");
     }
 
-    private function countEvents(string $where): int
+    private function countEvents(string $where, bool $skipExisting = false): int
     {
-        $sql = "SELECT count() as cnt FROM event_enriched {$where}";
+        if ($skipExisting) {
+            $sql = "
+                SELECT count() as cnt
+                FROM event_enriched e
+                {$where}
+                AND e.message_id NOT IN (SELECT source_message_id FROM user_touchpoints WHERE source_message_id != '')
+            ";
+        } else {
+            $sql = "SELECT count() as cnt FROM event_enriched {$where}";
+        }
         $result = $this->client->select($sql);
         return (int) ($result->rows()[0]['cnt'] ?? 0);
     }
 
-    private function fetchEnrichedEvents(string $where, int $offset, int $limit): array
+    private function fetchEnrichedEvents(string $where, int $offset, int $limit, bool $skipExisting = false): array
     {
+        $skipClause = $skipExisting
+            ? "AND e.message_id NOT IN (SELECT source_message_id FROM user_touchpoints WHERE source_message_id != '')"
+            : '';
+
         $sql = "
             SELECT
-                team_id,
-                source_id,
-                event_name,
-                event_type,
-                user_id,
-                anonymous_id,
-                message_id,
-                session_id,
-                event_timestamp,
-                page_url,
-                page_path,
-                page_domain,
-                landing_referrer,
-                landing_referring_domain,
-                utm_source,
-                utm_medium,
-                utm_campaign,
-                utm_content,
-                utm_term,
-                traffic_channel,
-                platform,
-                click_id,
-                is_paid,
-                is_direct
-            FROM event_enriched
+                e.team_id,
+                e.source_id,
+                e.event_name,
+                e.event_type,
+                e.user_id,
+                e.anonymous_id,
+                e.message_id,
+                e.session_id,
+                e.event_timestamp,
+                e.page_url,
+                e.page_path,
+                e.page_domain,
+                e.landing_referrer,
+                e.landing_referring_domain,
+                e.utm_source,
+                e.utm_medium,
+                e.utm_campaign,
+                e.utm_content,
+                e.utm_term,
+                e.traffic_channel,
+                e.platform,
+                e.click_id,
+                e.is_paid,
+                e.is_direct
+            FROM event_enriched e
             {$where}
-            ORDER BY event_timestamp ASC
+            {$skipClause}
+            ORDER BY e.event_timestamp ASC
             LIMIT {$limit} OFFSET {$offset}
         ";
 
@@ -431,13 +448,13 @@ class ProcessAttributionDirectCommand extends Command
     // STEP 2: CALCULATE ATTRIBUTION
     // ============================================================
 
-    private function processAttribution(int $chunkSize, ?string $fromDate, ?string $toDate, ?string $teamId, bool $dryRun): void
+    private function processAttribution(int $chunkSize, ?string $fromDate, ?string $toDate, ?string $teamId, bool $skipExisting, bool $dryRun): void
     {
         $this->info('Step 2/3: Calculating Attribution...');
 
         $where = $this->buildWhereClause($fromDate, $toDate, $teamId, 'touchpoint_timestamp');
         $where .= " AND is_conversion = 1";
-        $total = $this->countConversions($where);
+        $total = $this->countConversions($where, $skipExisting);
 
         if ($total === 0) {
             $this->info('  -> No conversions to process');
@@ -456,7 +473,7 @@ class ProcessAttributionDirectCommand extends Command
         $processedConversions = 0;
 
         while ($offset < $total) {
-            $conversions = $this->fetchConversions($where, $offset, $chunkSize);
+            $conversions = $this->fetchConversions($where, $offset, $chunkSize, $skipExisting);
 
             if (empty($conversions)) {
                 break;
@@ -507,30 +524,44 @@ class ProcessAttributionDirectCommand extends Command
         $this->info("  -> Calculated attribution for {$processedConversions} conversions");
     }
 
-    private function countConversions(string $where): int
+    private function countConversions(string $where, bool $skipExisting = false): int
     {
-        $sql = "SELECT count() as cnt FROM user_touchpoints {$where}";
+        if ($skipExisting) {
+            $sql = "
+                SELECT count() as cnt
+                FROM user_touchpoints t
+                {$where}
+                AND t.message_id NOT IN (SELECT conversion_message_id FROM attributed_conversions WHERE conversion_message_id != '')
+            ";
+        } else {
+            $sql = "SELECT count() as cnt FROM user_touchpoints {$where}";
+        }
         $result = $this->client->select($sql);
         return (int) ($result->rows()[0]['cnt'] ?? 0);
     }
 
-    private function fetchConversions(string $where, int $offset, int $limit): array
+    private function fetchConversions(string $where, int $offset, int $limit, bool $skipExisting = false): array
     {
+        $skipClause = $skipExisting
+            ? "AND t.message_id NOT IN (SELECT conversion_message_id FROM attributed_conversions WHERE conversion_message_id != '')"
+            : '';
+
         $sql = "
             SELECT
-                team_id,
-                resolved_user_id,
-                message_id,
-                touchpoint_timestamp,
-                event_name,
-                conversion_score,
-                conversion_value,
-                conversion_revenue,
-                conversion_currency,
-                order_id
-            FROM user_touchpoints
+                t.team_id,
+                t.resolved_user_id,
+                t.message_id,
+                t.touchpoint_timestamp,
+                t.event_name,
+                t.conversion_score,
+                t.conversion_value,
+                t.conversion_revenue,
+                t.conversion_currency,
+                t.order_id
+            FROM user_touchpoints t
             {$where}
-            ORDER BY touchpoint_timestamp ASC
+            {$skipClause}
+            ORDER BY t.touchpoint_timestamp ASC
             LIMIT {$limit} OFFSET {$offset}
         ";
 
