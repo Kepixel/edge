@@ -70,6 +70,8 @@ class ProcessRudderRequest implements ShouldQueue
             $anonymousId = (string)($this->data['anonymousId'] ?? null);
 
             $client = app(Client::class);
+            $client->setTimeout(600 * 4);
+            $client->setConnectTimeOut(60 * 4);
 
             $row = $client->select(
                 '
