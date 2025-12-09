@@ -45,8 +45,10 @@ class SeedEventDeliveryLogJob implements ShouldQueue
         } elseif (is_array($payload)) {
             $payload = json_decode(json_encode($payload), true);
         }
-
-        app(Client::class)->insert(
+        $client = app(Client::class);
+        $client->setTimeout(600 * 4);
+        $client->setConnectTimeOut(60 * 4);
+        $client->insert(
             'event_delivery_logs',
             [
                 [
