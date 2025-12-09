@@ -12,16 +12,6 @@ class SeedEventUploadLogJob implements ShouldQueue
     use Queueable;
 
     /**
-     * The number of times the job may be attempted.
-     */
-    public int $tries = 20;
-
-    /**
-     * The number of seconds to wait before retrying the job.
-     */
-    public array $backoff = [5, 15, 30, 60, 120];
-
-    /**
      * Create a new job instance.
      */
     public function __construct(public $source, public array $data)
@@ -79,21 +69,6 @@ class SeedEventUploadLogJob implements ShouldQueue
         $this->source->update([
             'last_upload_at' => $this->data['sentAt'] ?? now(),
         ]);
-
-        // 3) dispatch enrichment for this single event
-//        ProcessEventEnrichedJob::dispatch(
-//            teamId: $this->source->team_id,
-//            sourceId: $this->source->id,
-//            eventName: $this->data['event'] ?? $this->data['type'] ?? 'unknown',
-//            eventType: $this->data['type'] ?? 'track',
-//            userId: $this->data['userId'] ?? null,
-//            anonymousId: $this->data['anonymousId'] ?? null,
-//            messageId: $this->data['messageId'] ?? null,
-//            sessionId: $this->data['context']['sessionId'] ?? null,
-//            rudderId: $this->data['rudderId'] ?? null,
-//            properties: $this->data,
-//            eventTimestamp: $eventTimestamp,
-//        );
     }
 
     /**
@@ -101,6 +76,6 @@ class SeedEventUploadLogJob implements ShouldQueue
      */
     public function retryUntil(): \DateTime
     {
-        return now()->addMinutes(10);
+        return now()->addDays(2);
     }
 }

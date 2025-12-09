@@ -13,16 +13,6 @@ class SeedEventDeliveryLogJob implements ShouldQueue
     use Queueable;
 
     /**
-     * The number of times the job may be attempted.
-     */
-    public int $tries = 20;
-
-    /**
-     * The number of seconds to wait before retrying the job.
-     */
-    public array $backoff = [5, 15, 30, 60, 120];
-
-    /**
      * Create a new job instance.
      */
     public function __construct(
@@ -91,6 +81,6 @@ class SeedEventDeliveryLogJob implements ShouldQueue
      */
     public function retryUntil(): \DateTime
     {
-        return now()->addMinutes(10);
+        return now()->addDays(10);
     }
 }

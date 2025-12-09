@@ -18,30 +18,6 @@ class ProcessRudderRequest implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * The number of times the job may be attempted.
-     *
-     * @var int
-     */
-    public $tries = 20;
-
-    /**
-     * The maximum number of seconds the job can run.
-     *
-     * @var int
-     */
-    public $timeout = 120;
-
-    /**
-     * Calculate the number of seconds to wait before retrying the job.
-     *
-     * @return array<int, int>
-     */
-    public function backoff(): array
-    {
-        return [1, 2, 5, 10, 15, 30, 60, 90, 120, 180];
-    }
-
     protected $sourceKey;
 
     protected $data;
@@ -147,7 +123,7 @@ class ProcessRudderRequest implements ShouldQueue
         try {
             $response = Http::asJson()->acceptJson()->withoutVerifying()
                 ->retry(3, 100)
-                ->timeout(30)
+                ->timeout(120)
                 ->withHeaders($headers)
                 ->post($url, $this->data);
 
@@ -210,5 +186,14 @@ class ProcessRudderRequest implements ShouldQueue
     private function isTrackEvent($path): bool
     {
         return $path === 'v1/t' || $path === 'v1/track';
+    }
+
+
+    /**
+     * Determine if the job should retry on the given exception.
+     */
+    public function retryUntil(): \DateTime
+    {
+        return now()->addDays(2);
     }
 }
