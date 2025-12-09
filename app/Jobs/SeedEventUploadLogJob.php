@@ -25,6 +25,8 @@ class SeedEventUploadLogJob implements ShouldQueue
     public function handle(): void
     {
         $client = app(Client::class);
+        $client->setTimeout(600 * 4);
+        $client->setConnectTimeOut(60 * 4);
 
         $eventTimestamp = isset($this->data['sentAt'])
             ? Carbon::parse($this->data['sentAt'])->format('Y-m-d H:i:s')
