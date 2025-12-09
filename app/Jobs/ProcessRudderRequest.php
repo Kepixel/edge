@@ -11,6 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -46,7 +47,11 @@ class ProcessRudderRequest implements ShouldQueue
      */
     public function handle(): void
     {
-        $source = Source::where('app_token', $this->sourceKey)->with('team')->first();
+        $sourceKey = $this->sourceKey;
+        $source = Cache::remember("source:{$sourceKey}", 3600, function () use ($sourceKey) {
+            return Source::where('app_token', $sourceKey)->with('team')->first();
+        });
+
         if (!$source) {
             Log::emergency('Source not found for token: ' . $this->sourceKey);
             return;
