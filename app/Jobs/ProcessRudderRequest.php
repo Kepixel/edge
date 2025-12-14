@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Source;
-use App\Helpers\EdgeUsageTracker;
+use App\Services\TeamEventUsageService;
 use ClickHouseDB\Client;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -45,7 +45,7 @@ class ProcessRudderRequest implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(EdgeUsageTracker $usageTracker): void
+    public function handle(TeamEventUsageService $usageTracker): void
     {
         $sourceKey = $this->sourceKey;
         $source = Cache::remember("source:{$sourceKey}", 3600, function () use ($sourceKey) {
