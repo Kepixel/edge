@@ -69,9 +69,9 @@ class ProcessRudderRequest implements ShouldQueue
             $usage = $usageTracker->incrementUsage($team, $eventData['event'] ?? $eventData['properties']['event'] ?? null);
 
             // Dispatch threshold check job with sampling
-//            if ($usageTracker->shouldCheckThreshold($usage['events'], $usage['orders'])) {
+            if ($usageTracker->shouldCheckThreshold($usage['events'], $usage['orders'])) {
 //                CheckUsageThresholdJob::dispatch($team->id);
-//            }
+            }
 
             $sessionId = (string)($this->data['context']['sessionId'] ?? null);
             $anonymousId = (string)($this->data['anonymousId'] ?? null);
