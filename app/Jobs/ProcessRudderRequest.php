@@ -126,11 +126,11 @@ class ProcessRudderRequest implements ShouldQueue
         }
 
         // Check if team is blocked for usage limit (different from manual suspension)
-        if ($team->is_delivery_suspended) {
-            // Log event for audit but don't forward to Rudder
-            SeedEventUploadLogJob::dispatch($source, $this->data);
-            return;
-        }
+//        if ($team->is_delivery_suspended) {
+//            // Log event for audit but don't forward to Rudder
+//            SeedEventUploadLogJob::dispatch($source, $this->data);
+//            return;
+//        }
 
         $url = "http://localhost:8080/$this->path";
         $headers = $this->headers;
