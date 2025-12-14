@@ -51,7 +51,7 @@
                 "../app/app/Models/"
             ],
             "App\\Services\\": [
-                "app/Services/",
+                "app/Helpers/",
                 "../app/app/Services/"
             ],
             "Database\\Factories\\": [
