@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Source;
-use App\Services\TeamEventUsageService;
+use App\Helpers\EdgeUsageTracker;
 use ClickHouseDB\Client;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -45,7 +45,7 @@ class ProcessRudderRequest implements ShouldQueue
     /**
      * Execute the job.
      */
-    public function handle(): void
+    public function handle(EdgeUsageTracker $usageTracker): void
     {
         $sourceKey = $this->sourceKey;
         $source = Cache::remember("source:{$sourceKey}", 3600, function () use ($sourceKey) {
@@ -64,8 +64,15 @@ class ProcessRudderRequest implements ShouldQueue
             return;
         }
 
-
+        // Track usage for track events
         if ($this->isTrackEvent($this->path)) {
+            $usage = $usageTracker->incrementUsage($team, $eventData['event'] ?? $eventData['properties']['event'] ?? null);
+
+            // Dispatch threshold check job with sampling
+//            if ($usageTracker->shouldCheckThreshold($usage['events'], $usage['orders'])) {
+//                CheckUsageThresholdJob::dispatch($team->id);
+//            }
+
             $sessionId = (string)($this->data['context']['sessionId'] ?? null);
             $anonymousId = (string)($this->data['anonymousId'] ?? null);
 
@@ -118,7 +125,9 @@ class ProcessRudderRequest implements ShouldQueue
             }
         }
 
+        // Check if team is blocked for usage limit (different from manual suspension)
         if ($team->is_delivery_suspended) {
+            // Log event for audit but don't forward to Rudder
             SeedEventUploadLogJob::dispatch($source, $this->data);
             return;
         }
