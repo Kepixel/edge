@@ -98,7 +98,7 @@ class EventDeliveryStatusAction extends Controller
 
                 // Broadcast to destination-specific channel
                 $channelName = 'live-destinations.'.$destination->id;
-                broadcast(new LiveEvent($channelName, $eventData));
+//                broadcast(new LiveEvent($channelName, $eventData));
 
                 // Track destination update for batch processing
                 $lastDeliveryAt = isset($item['sentAt'])
