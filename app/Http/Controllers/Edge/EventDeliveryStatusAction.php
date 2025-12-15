@@ -63,6 +63,14 @@ class EventDeliveryStatusAction extends Controller
                 $sourceId = $item['sourceId'] ?? null;
                 $source = $sourceId ? $sources->get($sourceId) : null;
 
+                // Dispatch job to persist event delivery log with retry logic
+                SeedEventDeliveryLogJob::dispatch(
+                    $destination->team_id,
+                    $destination->id,
+                    $sourceId,
+                    $item
+                );
+
                 // Organize event data for broadcasting
                 $eventData = [
                     'id' => uniqid(),
@@ -88,17 +96,13 @@ class EventDeliveryStatusAction extends Controller
                     'event_type' => $item['eventType'] ?? 'track',
                 ];
 
+
+
                 // Broadcast to destination-specific channel
                 $channelName = 'live-destinations.'.$destination->id;
-//                broadcast(new LiveEvent($channelName, $eventData));
+                broadcast(new LiveEvent($channelName, $eventData));
 
-                // Dispatch job to persist event delivery log with retry logic
-                SeedEventDeliveryLogJob::dispatch(
-                    $destination->team_id,
-                    $destination->id,
-                    $sourceId,
-                    $item
-                );
+
 
                 // Track destination update for batch processing
                 $lastDeliveryAt = isset($item['sentAt'])
