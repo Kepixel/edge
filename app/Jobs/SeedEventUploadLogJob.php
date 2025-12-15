@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Events\LiveEvent;
 use Carbon\Carbon;
 use ClickHouseDB\Client;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -68,6 +69,25 @@ class SeedEventUploadLogJob implements ShouldQueue
         );
 
         $this->source->update(['last_upload_at' => now()]);
+
+        if ($this->source->is_live_event_enabled) {
+
+            $channelName = 'live-sources.' . $this->source->app_token;
+
+            $eventData = [
+                'id' => uniqid(),
+                'timestamp' => $this->data['receivedAt'] ?? now()->toISOString(),
+                'event' => $this->data['eventName'] ?? $item['eventType'] ?? 'unknown',
+                'properties' => $this->data['properties'],
+                'userId' => $this->data['userId'] ?? null,
+                'anonymousId' => $this->data['anonymousId'] ?? null,
+                'source_id' => $this->source->id,
+                'write_key' => $this->source->app_token,
+            ];
+
+            // Broadcast the event
+            broadcast(new LiveEvent($channelName, $eventData));
+        }
     }
 
     /**
