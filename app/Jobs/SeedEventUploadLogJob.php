@@ -66,6 +66,8 @@ class SeedEventUploadLogJob implements ShouldQueue
                 'created_at',
             ]
         );
+
+        $this->source->update(['last_upload_at' => now()]);
     }
 
     /**
