@@ -76,7 +76,7 @@ class SeedEventUploadLogJob implements ShouldQueue
 
             $eventData = [
                 'id' => uniqid(),
-                'timestamp' => $this->data['receivedAt'] ?? now()->toISOString(),
+                'timestamp' => $this->data['sentAt'] ?? now()->toISOString(),
                 'event' => $this->data['eventName'] ?? $item['eventType'] ?? 'unknown',
                 'properties' => $this->data['properties'],
                 'userId' => $this->data['userId'] ?? null,
