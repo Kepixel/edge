@@ -66,7 +66,7 @@ class ProcessRudderRequest implements ShouldQueue
 
         // Track usage for track events
         if ($this->isTrackEvent($this->path)) {
-            $usage = $usageTracker->incrementUsage($team, $eventData['event'] ?? $eventData['properties']['event'] ?? null);
+            $usage = $usageTracker->incrementUsage($team, $this->data);
 
             // Dispatch threshold check job with sampling
             if ($usageTracker->shouldCheckThreshold($usage['events'], $usage['orders'])) {
