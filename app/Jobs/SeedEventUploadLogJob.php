@@ -75,10 +75,10 @@ class SeedEventUploadLogJob implements ShouldQueue
             $channelName = 'live-sources.' . $this->source->app_token;
 
             $eventData = [
-                'id' => uniqid(),
+                'id' => $this->data['messageId'] ?? $this->data['eventId'] ?? uniqid(),
                 'timestamp' => $this->data['sentAt'] ?? now()->toISOString(),
-                'event' => $this->data['eventName'] ?? $item['eventType'] ?? $item['event'] ?? 'unknown',
-                'properties' => [],
+                'event' => $this->data['eventName'] ?? $this->data['eventType'] ?? $this->data['event'] ?? 'unknown',
+                'properties' => $this->data['properties'] ?? [],
                 'userId' => $this->data['userId'] ?? null,
                 'anonymousId' => $this->data['anonymousId'] ?? null,
                 'source_id' => $this->source->id,
