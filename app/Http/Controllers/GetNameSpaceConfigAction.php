@@ -149,7 +149,7 @@ class GetNameSpaceConfigAction extends Controller
                                 'refresh_token' => $adAccount->refresh_token,
                                 'developer_token' => '' // todo need to know how to get it
                             ],
-                            'userId' => $adAccount->external_account_id,
+                            'userId' => $adAccount->team_id,
                             'metadata' => [
                                 'userId' => $adAccount->external_account_id,
                                 'displayName' => $adAccount->external_account_name,
