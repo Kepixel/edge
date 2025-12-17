@@ -18,7 +18,7 @@ class GetNameSpaceConfigAction extends Controller
         $allConfig = [];
         // Eager load sources with their destinations to avoid N+1
         $teams = Team::whereHas('destinationSources')
-            ->with(['sources.destinations'])
+            ->with(['sources.destinations', 'adAccounts'])
             ->get();
 
         foreach ($teams as $team) {
@@ -134,11 +134,18 @@ class GetNameSpaceConfigAction extends Controller
                 $sources[] = $sourceConfig;
             }
 
+            $accounts = [];
+
+            foreach ($team->adAccounts as $adAccount) {
+
+            }
+
             $baseConfig = [
                 'workspaceId' => $workspaceId,
                 'sources' => $sources,
 //                'destinations' => array_values($uniqueDestinations),
                 'connections' => empty($connections) ? new stdClass : $connections,
+                'accounts'  =>  empty($accounts) ? new stdClass : $accounts
             ];
 
             $allConfig[$team->id] = $baseConfig;
