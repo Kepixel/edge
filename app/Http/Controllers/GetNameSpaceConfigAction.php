@@ -90,8 +90,8 @@ class GetNameSpaceConfigAction extends Controller
                     switch ($destinationModel->platform) {
                         case 'facebook-conversions':
                             $destination = $this->getMetaDestination($team->id);
-                            $destination['config']['datasetId'] = $config['pixel_id'] ?? $config['datasetId'];
-                            $destination['config']['accessToken'] = $config['access_token'] ?? $config['accessToken'];
+                            $destination['config']['datasetId'] = $config['pixel_id'] ?? $config['datasetId'] ?? null;
+                            $destination['config']['accessToken'] = $config['access_token'] ?? $config['accessToken'] ?? null;
                             $destination['config']['eventsToEvents'] = $destinationModel->pivot->event_mappings;
                             break;
                         case 'tiktok-ads':
