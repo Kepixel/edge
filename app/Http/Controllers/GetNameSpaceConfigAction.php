@@ -147,7 +147,7 @@ class GetNameSpaceConfigAction extends Controller
                             'secret' => [
                                 'access_token' => $adAccount->access_token,
                                 'refresh_token' => $adAccount->refresh_token,
-                                'developer_token' => '' // todo need to know how to get it
+                                'developer_token' => 'g2N0OnSBV7CXfRshWPEocw' // todo change to env
                             ],
                             'userId' => $adAccount->team_id,
                             'metadata' => [
