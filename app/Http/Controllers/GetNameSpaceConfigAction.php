@@ -137,7 +137,35 @@ class GetNameSpaceConfigAction extends Controller
             $accounts = [];
 
             foreach ($team->adAccounts as $adAccount) {
-
+                // google_ads, meta_ads, tiktok_ads, snap_ads, linkedin_ads
+                switch ($adAccount->provider) {
+                    case 'google_ads':
+                        $account = [
+                            'name' => $adAccount->id,
+                            'role' => 'credentialsManagement',
+                            'options' => [],
+                            'secret' => [
+                                'access_token' => $adAccount->access_token,
+                                'refresh_token' => $adAccount->refresh_token,
+                                'developer_token' => '02Q_To9ky_mkt1GWu28h9w'
+                            ],
+                            'userId' => $adAccount->external_account_id,
+                            'metadata' => [
+                                'userId' => $adAccount->external_account_id,
+                                'displayName' => $adAccount->external_account_name,
+                                'email' => $adAccount->extra['email'] ?? uniqid(),
+                                'userName' => $adAccount->extra['email'] ?? uniqid()
+                            ],
+                            'secretVersion' => 1,
+                            'rudderCategory' => 'credentialsManagement',
+                            'accountDefinitionName' => 'DESTINATION_GOOGLE_ADWORDS_OFFLINE_CONVERSIONS_OAUTH'
+                        ];;
+                        break;
+                }
+                if (empty($account)) {
+                    continue;
+                }
+                $accounts[$adAccount->id] = $account;
             }
 
             $baseConfig = [
