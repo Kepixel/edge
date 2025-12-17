@@ -122,7 +122,7 @@ class GetNameSpaceConfigAction extends Controller
                     $destination['id'] = $destinationModel->id;
                     $destination['name'] = $destinationModel->name ?? 'no name';
                     $sourceDestinations[] = $destination;
-                    $connections[$source->id.$destinationModel->id] = [
+                    $connections[$source->id . $destinationModel->id] = [
                         'sourceId' => $source->id,
                         'destinationId' => $destinationModel->id,
                         'enabled' => $destinationModel->status === 'configured',
