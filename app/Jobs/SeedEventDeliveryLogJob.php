@@ -2,11 +2,11 @@
 
 namespace App\Jobs;
 
-use App\Models\Destination;
 use Carbon\Carbon;
 use ClickHouseDB\Client;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Kepixel\Core\Models\Destination;
 
 class SeedEventDeliveryLogJob implements ShouldQueue
 {

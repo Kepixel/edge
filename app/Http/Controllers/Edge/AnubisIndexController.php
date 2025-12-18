@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Edge;
 
 use App\Http\Controllers\Controller;
-use App\Models\Source;
 use Illuminate\Support\Facades\Cache;
+use Kepixel\Core\Models\Source;
 use MatthiasMullie\Minify;
 
 class AnubisIndexController extends Controller
@@ -14,7 +14,7 @@ class AnubisIndexController extends Controller
         $sourceKey = request()->query('appId', request()->query('writeKey'));
 
         /** @var Source $source */
-        $source = Cache::remember('source_data_' . $sourceKey, 86400, function () use ($sourceKey) {
+        $source = Cache::remember('source_data_'.$sourceKey, 86400, function () use ($sourceKey) {
             return Source::where('app_token', $sourceKey)->with('destinations')->first(['id', 'app_token', 'tag_id', 'type',
                 'use_custom_gtm',
                 'own_gtm_container_id',
@@ -24,12 +24,12 @@ class AnubisIndexController extends Controller
             ]);
         });
 
-        if (!$source) {
+        if (! $source) {
             return redirect('https://kepixel.com');
         }
 
-        $configJs = 'window.kepixelSourceType = ' . json_encode($source->type) . ";\n";
-        $configJs .= 'window.kepixelSourceKey = ' . json_encode($sourceKey) . ";\n";
+        $configJs = 'window.kepixelSourceType = '.json_encode($source->type).";\n";
+        $configJs .= 'window.kepixelSourceKey = '.json_encode($sourceKey).";\n";
 
         $eventValidator = file_get_contents(base_path('static/cdn/event-validator.js'));
         $urlParams = file_get_contents(base_path('static/cdn/url-params.js'));
@@ -40,7 +40,7 @@ class AnubisIndexController extends Controller
         $js .= PHP_EOL;
         $js .= $urlParams;
         $js .= PHP_EOL;
-        $js .= $configJs . $trackerContent;
+        $js .= $configJs.$trackerContent;
         $js .= PHP_EOL;
 
         if ($source->type === 'salla') {
@@ -94,17 +94,18 @@ class AnubisIndexController extends Controller
         if ($source->tag_id) {
             $gtIds[] = $source->tag_id;
         }
-        if (!empty($gtIds)) {
+        if (! empty($gtIds)) {
             // Sanitize, trim, remove empties and duplicates
             $gtIds = array_values(array_unique(array_filter(array_map(function ($v) {
-                $s = is_string($v) ? trim($v) : (is_null($v) ? '' : trim((string)$v));
+                $s = is_string($v) ? trim($v) : (is_null($v) ? '' : trim((string) $v));
+
                 return $s !== '' ? $s : null;
             }, $gtIds))));
 
-            if (!empty($gtIds)) {
+            if (! empty($gtIds)) {
                 // Expose IDs to the GTM loader so it can configure them on load
-                $gtGlobals = 'window.GTM_CONTAINER_IDS = ' . json_encode($gtIds) . ';';
-                $js .= $gtGlobals . PHP_EOL;
+                $gtGlobals = 'window.GTM_CONTAINER_IDS = '.json_encode($gtIds).';';
+                $js .= $gtGlobals.PHP_EOL;
 
                 // Append GTM loader script
                 $gtmJs = file_get_contents(base_path('static/sdk/gtm.js'));
@@ -123,19 +124,20 @@ class AnubisIndexController extends Controller
             $gaIds[] = $source->own_analytics_measurement_id;
         }
 
-        if (!empty($gaIds)) {
+        if (! empty($gaIds)) {
             // Sanitize, trim, remove empties and duplicates
             $gaIds = array_values(array_unique(array_filter(array_map(function ($v) {
-                $s = is_string($v) ? trim($v) : (is_null($v) ? '' : trim((string)$v));
+                $s = is_string($v) ? trim($v) : (is_null($v) ? '' : trim((string) $v));
+
                 return $s !== '' ? $s : null;
             }, $gaIds))));
 
             // Expose IDs to the GA loader so it can configure them on load
-            if (!empty($gaIds)) {
-                $gaGlobals = 'window.GA_MEASUREMENT_IDS = ' . json_encode($gaIds) . ';';
+            if (! empty($gaIds)) {
+                $gaGlobals = 'window.GA_MEASUREMENT_IDS = '.json_encode($gaIds).';';
                 // Also set a primary (legacy) ID for compatibility
-                $gaGlobals .= 'window.GA_MEASUREMENT_ID = ' . json_encode($gaIds[0]) . ';';
-                $js .= $gaGlobals . PHP_EOL;
+                $gaGlobals .= 'window.GA_MEASUREMENT_ID = '.json_encode($gaIds[0]).';';
+                $js .= $gaGlobals.PHP_EOL;
             }
 
             $ga4Js = file_get_contents(base_path('static/sdk/ga.js'));

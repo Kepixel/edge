@@ -3,9 +3,8 @@
 namespace App\Http\Controllers\Edge;
 
 use App\Http\Controllers\Controller;
-use App\Models\Destination;
-use App\Models\Source;
 use Illuminate\Support\Facades\Cache;
+use Kepixel\Core\Models\Source;
 
 class SourceConfigController extends Controller
 {
@@ -13,15 +12,15 @@ class SourceConfigController extends Controller
     {
         $sourceKey = request()->query('writeKey');
 
-        $sourceExists = Cache::remember('source_exists_' . $sourceKey, 86400, function () use ($sourceKey) {
+        $sourceExists = Cache::remember('source_exists_'.$sourceKey, 86400, function () use ($sourceKey) {
             return $sourceKey && Source::where('app_token', $sourceKey)->exists();
         });
 
-        if (!$sourceExists) {
+        if (! $sourceExists) {
             return redirect('https://kepixel.com');
         }
 
-        $cacheKey = 'source_config_response_' . $sourceKey;
+        $cacheKey = 'source_config_response_'.$sourceKey;
         $response = Cache::remember($cacheKey, 3600, function () use ($sourceKey) {
             $source = Source::where('app_token', $sourceKey)->first();
 
@@ -42,7 +41,7 @@ class SourceConfigController extends Controller
                     'workspaceId' => $source->team_id,
                     'destinations' => [],
                     'updatedAt' => $timestamp,
-                    'dataplanes' => (object)[],
+                    'dataplanes' => (object) [],
                 ],
                 'updatedAt' => $timestamp,
                 'consentManagementMetadata' => [
@@ -58,7 +57,7 @@ class SourceConfigController extends Controller
         return response()->json($response)
             ->header('Content-Type', 'application/json')
             ->header('Cache-Control', 'public, max-age=604800, immutable')
-            ->header('Expires', gmdate('D, d M Y H:i:s', time() + 604800) . ' GMT')
+            ->header('Expires', gmdate('D, d M Y H:i:s', time() + 604800).' GMT')
             ->header('X-Accel-Expires', '604800')
             ->header('ETag', md5(json_encode($response)));
     }

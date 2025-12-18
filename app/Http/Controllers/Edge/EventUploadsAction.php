@@ -4,9 +4,8 @@ namespace App\Http\Controllers\Edge;
 
 use App\Events\LiveEvent;
 use App\Http\Controllers\Controller;
-use App\Models\Source;
-use ClickHouseDB\Client;
 use Illuminate\Http\Request;
+use Kepixel\Core\Models\Source;
 
 class EventUploadsAction extends Controller
 {
@@ -49,7 +48,7 @@ class EventUploadsAction extends Controller
                 ];
 
                 // Broadcast the event
-//                broadcast(new LiveEvent($channelName, $eventData));
+                //                broadcast(new LiveEvent($channelName, $eventData));
             }
         }
 

@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Edge;
 use App\Events\LiveEvent;
 use App\Http\Controllers\Controller;
 use App\Jobs\SeedEventDeliveryLogJob;
-use App\Models\Destination;
-use App\Models\Source;
 use Illuminate\Http\Request;
+use Kepixel\Core\Models\Destination;
+use Kepixel\Core\Models\Source;
 
 class EventDeliveryStatusAction extends Controller
 {
@@ -98,7 +98,7 @@ class EventDeliveryStatusAction extends Controller
 
                 // Broadcast to destination-specific channel
                 $channelName = 'live-destinations.'.$destination->id;
-//                broadcast(new LiveEvent($channelName, $eventData));
+                //                broadcast(new LiveEvent($channelName, $eventData));
 
                 // Track destination update for batch processing
                 $lastDeliveryAt = isset($item['sentAt'])

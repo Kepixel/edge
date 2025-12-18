@@ -11,6 +11,7 @@
     "require": {
         "php": "^8.2",
         "cybercog/laravel-clickhouse": "^0.1.0",
+        "kepixel/core": "dev-main",
         "laravel/framework": "^12.0",
         "laravel/octane": "^2.12",
         "laravel/spark-stripe": "^6.0",
@@ -34,34 +35,8 @@
     "autoload": {
         "psr-4": {
             "App\\": "app/",
-            "App\\Events\\": [
-                "app/Events/",
-                "../app/app/Events/"
-            ],
-            "App\\Broadcasting\\": [
-                "app/Broadcasting/",
-                "../app/app/Broadcasting/"
-            ],
-            "App\\Jobs\\": [
-                "app/Jobs/",
-                "../app/app/Jobs/"
-            ],
-            "App\\Models\\": [
-                "app/Models/",
-                "../app/app/Models/"
-            ],
-            "App\\Services\\": [
-                "app/Helpers/",
-                "../app/app/Services/"
-            ],
-            "Database\\Factories\\": [
-                "database/factories/",
-                "../app/database/factories/"
-            ],
-            "Database\\Seeders\\": [
-                "database/seeders/",
-                "../app/database/seeders/"
-            ]
+            "Database\\Factories\\": "database/factories/",
+            "Database\\Seeders\\": "database/seeders/"
         }
     },
     "autoload-dev": {
@@ -114,6 +89,10 @@
         {
             "type": "composer",
             "url": "https://spark.laravel.com"
+        },
+        {
+            "type": "vcs",
+            "url": "git@github.com:Kepixel/core.git"
         }
     ]
 }

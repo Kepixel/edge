@@ -2,8 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Models\Source;
-use App\Services\TeamEventUsageService;
 use ClickHouseDB\Client;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,6 +12,8 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Kepixel\Core\Models\Source;
+use Kepixel\Core\Services\TeamEventUsageService;
 
 class ProcessRudderRequest implements ShouldQueue
 {
@@ -38,7 +38,7 @@ class ProcessRudderRequest implements ShouldQueue
         $this->data = $data;
         $this->headers = $headers;
         $this->path = $path;
-//        $this->onConnection('database');
+        //        $this->onConnection('database');
         $this->onQueue('high');
     }
 
@@ -52,15 +52,17 @@ class ProcessRudderRequest implements ShouldQueue
             return Source::where('app_token', $sourceKey)->with('team')->first();
         });
 
-        if (!$source) {
-            Log::emergency('Source not found for token: ' . $this->sourceKey);
+        if (! $source) {
+            Log::emergency('Source not found for token: '.$this->sourceKey);
+
             return;
         }
 
         $team = $source->team;
 
-        if (!$team) {
-            Log::emergency('Team not found for source: ' . $source->id);
+        if (! $team) {
+            Log::emergency('Team not found for source: '.$source->id);
+
             return;
         }
 
@@ -70,11 +72,11 @@ class ProcessRudderRequest implements ShouldQueue
 
             // Dispatch threshold check job with sampling
             if ($usageTracker->shouldCheckThreshold($usage['events'], $usage['orders'])) {
-//                CheckUsageThresholdJob::dispatch($team->id);
+                //                CheckUsageThresholdJob::dispatch($team->id);
             }
 
-            $sessionId = (string)($this->data['context']['sessionId'] ?? null);
-            $anonymousId = (string)($this->data['anonymousId'] ?? null);
+            $sessionId = (string) ($this->data['context']['sessionId'] ?? null);
+            $anonymousId = (string) ($this->data['anonymousId'] ?? null);
 
             $client = app(Client::class);
             $client->setTimeout(600 * 4);
@@ -97,29 +99,24 @@ class ProcessRudderRequest implements ShouldQueue
                 ]
             )->fetchOne();
 
-
-
-
             if ($row) {
                 $oldProperties = $row['properties'];
                 $oldProperties = json_decode($oldProperties, true);
                 $firstPageView = $oldProperties['properties'];
 
-                $this->data["referrer"] = $firstPageView["referrer"] ?? null;
-                $this->data["referring_domain"] = $firstPageView["referring_domain"] ?? null;
-                $this->data["initial_referrer"] = $firstPageView["initial_referrer"] ?? null;
-                $this->data["initial_referring_domain"] = $firstPageView["initial_referring_domain"] ?? null;
-
+                $this->data['referrer'] = $firstPageView['referrer'] ?? null;
+                $this->data['referring_domain'] = $firstPageView['referring_domain'] ?? null;
+                $this->data['initial_referrer'] = $firstPageView['initial_referrer'] ?? null;
+                $this->data['initial_referring_domain'] = $firstPageView['initial_referring_domain'] ?? null;
 
                 $this->data['context']['campaign'] = $oldProperties['context']['campaign'];
 
-
                 $contextPage = $this->data['context']['page'];
 
-                $contextPage["referrer"] = $firstPageView["referrer"] ?? null;
-                $contextPage["referring_domain"] = $firstPageView["referring_domain"] ?? null;
-                $contextPage["initial_referrer"] = $firstPageView["initial_referrer"] ?? null;
-                $contextPage["initial_referring_domain"] = $firstPageView["initial_referring_domain"] ?? null;
+                $contextPage['referrer'] = $firstPageView['referrer'] ?? null;
+                $contextPage['referring_domain'] = $firstPageView['referring_domain'] ?? null;
+                $contextPage['initial_referrer'] = $firstPageView['initial_referrer'] ?? null;
+                $contextPage['initial_referring_domain'] = $firstPageView['initial_referring_domain'] ?? null;
 
                 $this->data['context']['page'] = $contextPage;
             }
@@ -132,10 +129,9 @@ class ProcessRudderRequest implements ShouldQueue
 
         SeedEventUploadLogJob::dispatch($source, $this->data);
 
-
         $url = "http://localhost:8080/$this->path";
         $headers = $this->headers;
-        $headers['authorization'] = 'Basic ' . base64_encode($source->write_key . ':');
+        $headers['authorization'] = 'Basic '.base64_encode($source->write_key.':');
 
         try {
             $response = Http::asJson()->acceptJson()->withoutVerifying()
@@ -163,7 +159,7 @@ class ProcessRudderRequest implements ShouldQueue
             }
         } catch (ConnectionException $e) {
             // Network/connection issues are retryable
-            Log::error('Connection error processing Rudder request: ' . $e->getMessage(), [
+            Log::error('Connection error processing Rudder request: '.$e->getMessage(), [
                 'source_key' => $this->sourceKey,
                 'url' => $url,
                 'attempt' => $this->attempts(),
@@ -173,7 +169,7 @@ class ProcessRudderRequest implements ShouldQueue
             throw $e;
         } catch (\Exception $e) {
             // For other exceptions, log and don't retry unless it's clearly retryable
-            Log::error('Unexpected error processing Rudder request: ' . $e->getMessage(), [
+            Log::error('Unexpected error processing Rudder request: '.$e->getMessage(), [
                 'source_key' => $this->sourceKey,
                 'url' => $url,
                 'attempt' => $this->attempts(),
@@ -195,12 +191,10 @@ class ProcessRudderRequest implements ShouldQueue
             in_array($statusCode, [408, 429, 502, 503, 504, 522, 524]);
     }
 
-
     private function isTrackEvent($path): bool
     {
         return $path === 'v1/t' || $path === 'v1/track';
     }
-
 
     /**
      * Determine if the job should retry on the given exception.

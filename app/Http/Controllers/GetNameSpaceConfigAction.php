@@ -2,13 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use App\Models\Destination;
-use App\Models\DestinationSource;
-use App\Models\Source;
-use App\Models\Team;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Collection;
+use Kepixel\Core\Models\Team;
 use stdClass;
 
 class GetNameSpaceConfigAction extends Controller
@@ -112,6 +107,11 @@ class GetNameSpaceConfigAction extends Controller
                             $destination['config']['apiSecret'] = $config['api_secret'] ?? $config['apiSecret'];
                             $destination['config']['measurementId'] = $config['measurement_id'] ?? $config['measurementId'];
                             break;
+                        case 'google-adwords-enhanced-conversions':
+                            $destination = $this->getGoogleAdwordsEnhancedConversions($team->id);
+                            $destination['config']['customerId'] = $config['customer_id'] ?? $config['customerId'];
+                            $destination['config']['loginCustomerId'] = $config['login_customer_id'] ?? $config['loginCustomerId'];
+                            break;
                         default:
                             $destination = [];
                     }
@@ -122,7 +122,7 @@ class GetNameSpaceConfigAction extends Controller
                     $destination['id'] = $destinationModel->id;
                     $destination['name'] = $destinationModel->name ?? 'no name';
                     $sourceDestinations[] = $destination;
-                    $connections[$source->id . $destinationModel->id] = [
+                    $connections[$source->id.$destinationModel->id] = [
                         'sourceId' => $source->id,
                         'destinationId' => $destinationModel->id,
                         'enabled' => $destinationModel->status === 'configured',
@@ -147,19 +147,19 @@ class GetNameSpaceConfigAction extends Controller
                             'secret' => [
                                 'access_token' => $adAccount->access_token,
                                 'refresh_token' => $adAccount->refresh_token,
-                                'developer_token' => 'g2N0OnSBV7CXfRshWPEocw' // todo change to env
+                                'developer_token' => 'g2N0OnSBV7CXfRshWPEocw', // todo change to env
                             ],
                             'userId' => $adAccount->team_id,
                             'metadata' => [
                                 'userId' => $adAccount->external_account_id,
                                 'displayName' => $adAccount->external_account_name,
                                 'email' => $adAccount->extra['email'] ?? uniqid(),
-                                'userName' => $adAccount->extra['email'] ?? uniqid()
+                                'userName' => $adAccount->extra['email'] ?? uniqid(),
                             ],
                             'secretVersion' => 1,
                             'rudderCategory' => 'credentialsManagement',
-                            'accountDefinitionName' => 'DESTINATION_GOOGLE_ADWORDS_OFFLINE_CONVERSIONS_OAUTH'
-                        ];;
+                            'accountDefinitionName' => 'DESTINATION_GOOGLE_ADWORDS_OFFLINE_CONVERSIONS_OAUTH',
+                        ];
                         break;
                 }
                 if (empty($account)) {
@@ -171,9 +171,9 @@ class GetNameSpaceConfigAction extends Controller
             $baseConfig = [
                 'workspaceId' => $workspaceId,
                 'sources' => $sources,
-//                'destinations' => array_values($uniqueDestinations),
+                //                'destinations' => array_values($uniqueDestinations),
                 'connections' => empty($connections) ? new stdClass : $connections,
-                'accounts'  =>  empty($accounts) ? new stdClass : $accounts
+                'accounts' => empty($accounts) ? new stdClass : $accounts,
             ];
 
             $allConfig[$team->id] = $baseConfig;
@@ -1036,6 +1036,220 @@ class GetNameSpaceConfigAction extends Controller
             'updatedAt' => '2025-07-07T12:08:52.819Z',
             'revisionId' => '', // This will be set later
             'secretVersion' => 7,
+        ];
+    }
+
+    public function getGoogleAdwordsEnhancedConversions(string $workspaceId)
+    {
+        return [
+            'secretConfig' => [],
+            'config' => [
+                'rudderAccountId' => '', // This will be set later
+                'customerId' => '', // This will be set later
+                'listOfConversions' => [
+                    [
+                        'conversions' => '',
+                    ],
+                ],
+                'subAccount' => true,  // This will be set later
+                'loginCustomerId' => '', // This will be set later
+                'requireHash' => true,  // This will be set later
+                'connectionMode' => 'cloud',
+            ],
+            'liveEventsConfig' => [],
+            'id' => '',
+            'workspaceId' => $workspaceId,
+            'destinationDefinition' => [
+                'config' => [
+                    'auth' => [
+                        'type' => 'OAuth',
+                        'rudderScopes' => [
+                            'delivery',
+                        ],
+                    ],
+                    'destConfig' => [
+                        'amp' => [
+                            'connectionMode',
+                            'consentManagement',
+                            'oneTrustCookieCategories',
+                            'ketchConsentPurposes',
+                        ],
+                        'ios' => [
+                            'connectionMode',
+                            'consentManagement',
+                            'oneTrustCookieCategories',
+                            'ketchConsentPurposes',
+                        ],
+                        'web' => [
+                            'connectionMode',
+                            'consentManagement',
+                            'oneTrustCookieCategories',
+                            'ketchConsentPurposes',
+                        ],
+                        'cloud' => [
+                            'connectionMode',
+                            'consentManagement',
+                            'oneTrustCookieCategories',
+                            'ketchConsentPurposes',
+                        ],
+                        'unity' => [
+                            'connectionMode',
+                            'consentManagement',
+                            'oneTrustCookieCategories',
+                            'ketchConsentPurposes',
+                        ],
+                        'android' => [
+                            'connectionMode',
+                            'consentManagement',
+                            'oneTrustCookieCategories',
+                            'ketchConsentPurposes',
+                        ],
+                        'cordova' => [
+                            'connectionMode',
+                            'consentManagement',
+                            'oneTrustCookieCategories',
+                            'ketchConsentPurposes',
+                        ],
+                        'flutter' => [
+                            'connectionMode',
+                            'consentManagement',
+                            'oneTrustCookieCategories',
+                            'ketchConsentPurposes',
+                        ],
+                        'shopify' => [
+                            'connectionMode',
+                            'consentManagement',
+                            'oneTrustCookieCategories',
+                            'ketchConsentPurposes',
+                        ],
+                        'iosSwift' => [
+                            'connectionMode',
+                            'consentManagement',
+                        ],
+                        'warehouse' => [
+                            'connectionMode',
+                            'consentManagement',
+                            'oneTrustCookieCategories',
+                            'ketchConsentPurposes',
+                        ],
+                        'reactnative' => [
+                            'connectionMode',
+                            'consentManagement',
+                            'oneTrustCookieCategories',
+                            'ketchConsentPurposes',
+                        ],
+                        'androidKotlin' => [
+                            'connectionMode',
+                            'consentManagement',
+                        ],
+                        'defaultConfig' => [
+                            'rudderAccountId',
+                            'customerId',
+                            'listOfConversions',
+                            'subAccount',
+                            'loginCustomerId',
+                            'requireHash',
+                        ],
+                    ],
+                    'secretKeys' => [],
+                    'excludeKeys' => [],
+                    'includeKeys' => [
+                        'oneTrustCookieCategories',
+                        'ketchConsentPurposes',
+                        'consentManagement',
+                    ],
+                    'transformAtV1' => 'router',
+                    'supportedSourceTypes' => [
+                        'android',
+                        'androidKotlin',
+                        'ios',
+                        'iosSwift',
+                        'web',
+                        'unity',
+                        'amp',
+                        'cloud',
+                        'reactnative',
+                        'flutter',
+                        'cordova',
+                        'warehouse',
+                        'shopify',
+                    ],
+                    'saveDestinationResponse' => true,
+                    'supportedConnectionModes' => [
+                        'amp' => [
+                            'cloud',
+                        ],
+                        'ios' => [
+                            'cloud',
+                        ],
+                        'web' => [
+                            'cloud',
+                        ],
+                        'cloud' => [
+                            'cloud',
+                        ],
+                        'unity' => [
+                            'cloud',
+                        ],
+                        'android' => [
+                            'cloud',
+                        ],
+                        'cordova' => [
+                            'cloud',
+                        ],
+                        'flutter' => [
+                            'cloud',
+                        ],
+                        'shopify' => [
+                            'cloud',
+                        ],
+                        'iosSwift' => [
+                            'cloud',
+                        ],
+                        'warehouse' => [
+                            'cloud',
+                        ],
+                        'reactnative' => [
+                            'cloud',
+                        ],
+                        'androidKotlin' => [
+                            'cloud',
+                        ],
+                    ],
+                    'supportedAccountDefinitions' => [
+                        'rudderAccountId' => [
+                            'DESTINATION_GOOGLE_ADWORDS_ENHANCED_CONVERSIONS_OAUTH',
+                        ],
+                    ],
+                    'supportedMessageTypes' => [
+                        'track',
+                    ],
+                ],
+                'configSchema' => [],
+                'connectionConfigSchema' => [],
+                'responseRules' => [],
+                'options' => [
+                    'isBeta' => false,
+                ],
+                'uiConfig' => [],
+                'connectionUIConfig' => [],
+                'id' => '26VlfUy9TTInF5nln7Xgkyb11wA',
+                'name' => 'GOOGLE_ADWORDS_ENHANCED_CONVERSIONS',
+                'displayName' => 'Google Ads Enhanced Conversions',
+                'category' => null,
+                'createdAt' => '2022-03-17T11:32:17.807Z',
+                'updatedAt' => '2025-12-10T08:39:25.831Z',
+            ],
+            'transformations' => [],
+            'isConnectionEnabled' => true,
+            'isProcessorEnabled' => false,
+            'name' => '', // This will be set later
+            'enabled' => true,
+            'deleted' => false,
+            'createdAt' => '2025-12-14T06:39:33.199Z',   // This will be set later
+            'updatedAt' => '2025-12-14T06:39:38.231Z',   // This will be set later
+            'revisionId' => '', // This will be set later
+            'secretVersion' => 1,
         ];
     }
 }
