@@ -1542,12 +1542,12 @@
             "source": {
                 "type": "git",
                 "url": "git@github.com:Kepixel/core.git",
-                "reference": "cfdd7d85ffe9812ccc321f52bd60e5c24c5409f9"
+                "reference": "f9f4633eff051fcda1b6485830c67b66a9cf2f04"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Kepixel/core/zipball/cfdd7d85ffe9812ccc321f52bd60e5c24c5409f9",
-                "reference": "cfdd7d85ffe9812ccc321f52bd60e5c24c5409f9",
+                "url": "https://api.github.com/repos/Kepixel/core/zipball/f9f4633eff051fcda1b6485830c67b66a9cf2f04",
+                "reference": "f9f4633eff051fcda1b6485830c67b66a9cf2f04",
                 "shasum": ""
             },
             "require": {
@@ -1575,7 +1575,8 @@
             "autoload": {
                 "psr-4": {
                     "Kepixel\\Core\\": "src/",
-                    "Kepixel\\Core\\Database\\Factories\\": "database/factories/"
+                    "Kepixel\\Core\\Database\\Factories\\": "database/factories/",
+                    "Kepixel\\Core\\Database\\Seeders\\": "database/seeders/"
                 }
             },
             "autoload-dev": {
@@ -1596,9 +1597,9 @@
             ],
             "authors": [
                 {
-                    "name": "Kepixel",
-                    "email": "dev@kepixel.com",
-                    "role": "Developer"
+                    "name": "Mohamed Yasser",
+                    "email": "myasser@kepixel.com",
+                    "role": "CTO"
                 }
             ],
             "description": "Shared models, enums, services, and migrations for Kepixel projects",
@@ -1608,7 +1609,7 @@
                 "kepixel",
                 "laravel"
             ],
-            "time": "2025-12-18T19:52:16+00:00"
+            "time": "2025-12-18T20:14:27+00:00"
         },
         {
             "name": "laminas/laminas-diactoros",
