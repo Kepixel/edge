@@ -3,8 +3,8 @@
 namespace Tests\Unit;
 
 use App\Jobs\ProcessRudderRequest;
-use App\Models\Source;
-use App\Models\Team;
+use Kepixel\Core\Models\Source;
+use Kepixel\Core\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
