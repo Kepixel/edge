@@ -14,6 +14,7 @@
         "kepixel/core": "dev-main",
         "laravel/framework": "^12.0",
         "laravel/octane": "^2.12",
+        "laravel/reverb": "^1.0",
         "laravel/spark-stripe": "^6.0",
         "laravel/telescope": "^5.12",
         "laravel/tinker": "^2.10.1",
