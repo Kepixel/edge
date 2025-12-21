@@ -143,7 +143,7 @@ class GetNameSpaceConfigAction extends Controller
                         $account = [
                             'name' => $adAccount->id,
                             'role' => 'credentialsManagement',
-                            'options' => [],
+                            'options' => new stdClass,
                             'secret' => [
                                 'access_token' => $adAccount->access_token,
                                 'refresh_token' => $adAccount->refresh_token,
