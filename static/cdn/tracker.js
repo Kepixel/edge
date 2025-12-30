@@ -71,28 +71,10 @@
                 : window.kepixelAnalyticsMount();
 
             var loadOptions = {};
-            kepixelAnalytics.load(window.kepixelSourceKey || "", "https://edge.kepixel.com", loadOptions);
+            kepixelAnalytics.load(window.kepixelSourceKey || "", "https://hub.kepro.io", loadOptions);
         }
     }
 })();
-
-// (function() {
-//     var x = "_paq";
-//     window[x] || (window[x] = []);
-//     var _paq = window[x];
-//
-//     if (Array.isArray(_paq)) {
-//
-//     } else {
-//         _paq.push(['trackPageView']);
-//         _paq.push(['enableLinkTracking']);
-//         _paq.push(['setAppId', window.kepixelSourceKey || ""]);
-//         var d = document, g = d.createElement('script'), s = d.getElementsByTagName('script')[0];
-//         g.async = true; g.src = 'https://edge.kepixel.com/anubis.js'; s.parentNode.insertBefore(g, s);
-//         _paq.__loaded = true;
-//     }
-// })();
-
 
 (function() {
     const scripts = [
