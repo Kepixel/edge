@@ -22,33 +22,6 @@ Route::domain('source-config.kepixel.com')->group(function () {
     Route::get('sourceConfig', SourceConfigController::class);
 });
 
-Route::domain('config.kepixel.com')->group(function () {
-    Route::post('/dataplane/v2/eventUploads', EventUploadsAction::class);
-    Route::post('/dataplane/v2/eventDeliveryStatus', EventDeliveryStatusAction::class);
-
-
-    Route::any('/data-plane/v1/namespaces/{token}/settings', function ($token) {
-        return response('', 204);
-    });
-
-    Route::any('/data-plane/v1/workspaces/{token}/settings', function ($token) {
-        return response('', 204);
-    });
-
-    Route::any('/data-plane/v1/namespaces/{token}/config', GetNameSpaceConfigAction::class);
-
-//    Route::any('/data-plane/v1/namespaces/{token}/config', function ($token) {
-//        $config = base_path('../config.json');
-//        return response()->file($config, [
-//            'Content-Type' => 'application/json'
-//        ]);
-//    });
-
-    Route::get('/', ConfigIndexController::class);
-
-    Route::any('{any}', ConfigCatchAllController::class)->where('any', '.*');
-});
-
 Route::domain('anubis.kepixel.com')->group(function () {
     Route::get('/', AnubisIndexController::class)->name('anubis.index');
 });
