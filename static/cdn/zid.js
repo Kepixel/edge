@@ -126,6 +126,7 @@
                 if (kepixelEventName === 'Order Completed') {
                     ev.properties.order_id = ev.properties.transaction_id;
                     ev.properties.products = ev.properties['items'];
+                    ev.properties.customer = traits()
                 }
 
                 if (window.kepixelAnalytics && typeof window.kepixelAnalytics.track === "function") {
