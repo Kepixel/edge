@@ -245,6 +245,7 @@
             products: products,
             payment_method: paymentMethod,
             shipping_method: shippingMethod,
+            customer: userTraits,
             shipping_address: checkout.shippingAddress ? {
                 name: `${checkout.shippingAddress.firstName} ${checkout.shippingAddress.lastName}`,
                 street: checkout.shippingAddress.address1,
