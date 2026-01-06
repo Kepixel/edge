@@ -251,6 +251,7 @@
 
     function buildPurchasePayload(eventData, currency) {
         const ecommerce = eventData?.ecommerce || {};
+        const customer = eventData?.customer || {};
         const purchase = ecommerce.purchase || {};
         const actionField = purchase.actionField || {};
         const products = Array.isArray(purchase.products) ? purchase.products : [];
@@ -273,7 +274,8 @@
                     price: item.price,
                     discount: item.discount
                 };
-            })
+            }),
+            customer: customer
         };
     }
 
