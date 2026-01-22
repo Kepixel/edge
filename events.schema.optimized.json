@@ -1537,6 +1537,91 @@
             ],
             "description": "Payload schema for the \"Wishlist Product Added to Cart\" event.",
             "additionalProperties": false
+        },
+        {
+            "title": "Link Clicked",
+            "type": "object",
+            "properties": {
+                "event": {
+                    "const": "Link Clicked"
+                },
+                "link_url": {
+                    "type": "string"
+                },
+                "link_text": {
+                    "type": "string"
+                },
+                "link_type": {
+                    "type": "string",
+                    "enum": ["internal", "external", "cta", "navigation", "footer", "social"]
+                },
+                "link_id": {
+                    "type": "string"
+                },
+                "link_class": {
+                    "type": "string"
+                },
+                "page_url": {
+                    "type": "string",
+                    "format": "uri"
+                }
+            },
+            "required": ["event", "link_url"],
+            "description": "Payload schema for the \"Link Clicked\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Form Started",
+            "type": "object",
+            "properties": {
+                "event": {
+                    "const": "Form Started"
+                },
+                "form_id": {
+                    "type": "string"
+                },
+                "form_name": {
+                    "type": "string"
+                },
+                "form_type": {
+                    "type": "string"
+                },
+                "page_url": {
+                    "type": "string",
+                    "format": "uri"
+                },
+                "first_field": {
+                    "type": "string"
+                }
+            },
+            "required": ["event"],
+            "description": "Payload schema for the \"Form Started\" event.",
+            "additionalProperties": false
+        },
+        {
+            "title": "Form Viewed",
+            "type": "object",
+            "properties": {
+                "event": {
+                    "const": "Form Viewed"
+                },
+                "form_id": {
+                    "type": "string"
+                },
+                "form_name": {
+                    "type": "string"
+                },
+                "form_type": {
+                    "type": "string"
+                },
+                "page_url": {
+                    "type": "string",
+                    "format": "uri"
+                }
+            },
+            "required": ["event"],
+            "description": "Payload schema for the \"Form Viewed\" event.",
+            "additionalProperties": false
         }
     ]
 }

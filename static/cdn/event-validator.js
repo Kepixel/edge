@@ -78,6 +78,16 @@
         },
         'Wishlist Product Added to Cart': {
             required: ['event', 'wishlist_id', 'product_id', 'name', 'category']
+        },
+        // Marketing events for zid.sa
+        'Link Clicked': {
+            required: ['event', 'link_url']
+        },
+        'Form Started': {
+            required: ['event']
+        },
+        'Form Viewed': {
+            required: ['event']
         }
     };
 
