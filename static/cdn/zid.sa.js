@@ -72,6 +72,21 @@
         if (/^\/partners\/?$/.test(normalizedPath)) {
             return 'partners';
         }
+        if (/^\/blog(\/|$)/.test(normalizedPath)) {
+            return 'blog';
+        }
+        if (/^\/about-zid\/?$/.test(normalizedPath)) {
+            return 'about';
+        }
+        if (/^\/legal(\/|$)/.test(normalizedPath) || /^\/privacy-policy\/?$/.test(normalizedPath)) {
+            return 'legal';
+        }
+        if (/^\/resources(\/|$)/.test(normalizedPath) || /^\/contact-sales\/?$/.test(normalizedPath)) {
+            return 'resources';
+        }
+        if (/^\/(egypt|kuwait|oman|uae)\/?$/.test(normalizedPath)) {
+            return 'regional';
+        }
         return 'other';
     }
 
@@ -496,7 +511,7 @@
         track: track,
         page: page,
         detectPageType: detectPageType,
-        version: '2.1.0'
+        version: '2.2.0'
     };
 
 })();
