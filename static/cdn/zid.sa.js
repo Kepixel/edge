@@ -61,7 +61,7 @@
         }
     }
     function processDataLayerEvent(eventData) {
-        if (eventData?.event === 'gtm.dom') {
+        if (eventData?.event === 'gtm.dom' || eventData?.event === 'gtm.historyChange-v2') {
             handlePageView();
         }
         console.log(eventData)
