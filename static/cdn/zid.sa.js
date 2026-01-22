@@ -61,7 +61,7 @@
         }
     }
     function processDataLayerEvent(eventData) {
-        console.log(eventData)
+        console.log(eventData?.event)
     }
 
     const queuedEvents = [];
