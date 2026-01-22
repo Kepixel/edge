@@ -349,6 +349,45 @@
             "required": ["user-id"]
         },
         {
+            "title": "Form Error",
+            "type": "object",
+            "properties": {
+                "event": {
+                    "const": "Form Error"
+                },
+                "form_id": {
+                    "type": "string"
+                },
+                "form_label": {
+                    "type": "string"
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "field": {
+                                "type": "string"
+                            },
+                            "message": {
+                                "type": "string"
+                            }
+                        },
+                        "required": ["field", "message"],
+                        "additionalProperties": false
+                    },
+                    "minItems": 1
+                },
+                "url": {
+                    "type": "string",
+                    "format": "uri"
+                }
+            },
+            "required": ["event", "errors"],
+            "description": "Payload schema for the \"Form Error\" event.",
+            "additionalProperties": false
+        },
+        {
             "title": "Form Submitted",
             "type": "object",
             "properties": {
