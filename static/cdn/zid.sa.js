@@ -17,6 +17,7 @@
     var state = {
         formsStarted: {},
         formsViewed: {},
+        formsSubmitted: {},
         isReady: false,
         queuedEvents: []
     };
@@ -269,6 +270,48 @@
         });
     }
 
+    function getFormFields(form) {
+        var fields = {};
+        var inputs = form.querySelectorAll('input, select, textarea');
+        inputs.forEach(function(input) {
+            var name = input.name || input.id;
+            if (!name) return;
+            // Skip sensitive fields
+            if (/password|card|cvv|ssn|secret/i.test(name)) return;
+            if (input.type === 'password') return;
+
+            if (input.type === 'checkbox' || input.type === 'radio') {
+                if (input.checked) {
+                    fields[name] = input.value;
+                }
+            } else {
+                fields[name] = input.value || '';
+            }
+        });
+        return fields;
+    }
+
+    function trackFormSubmitted(event) {
+        var form = event.target;
+        if (!form || form.tagName !== 'FORM') return;
+
+        var formId = getFormIdentifier(form);
+
+        // Get form field values (excluding sensitive data)
+        var fields = getFormFields(form);
+
+        track('Form Submitted', {
+            form_id: form.id || null,
+            form_name: getFormName(form),
+            form_type: getFormType(form),
+            page_url: window.location.href,
+            fields: fields
+        });
+
+        // Mark as submitted to avoid duplicates
+        state.formsSubmitted[formId] = true;
+    }
+
     function setupFormViewedTracking() {
         var forms = document.querySelectorAll('form');
         if (!forms.length) return;
@@ -421,6 +464,9 @@
         // Setup form started tracking
         document.addEventListener('focus', trackFormStarted, true);
 
+        // Setup form submitted tracking
+        document.addEventListener('submit', trackFormSubmitted, true);
+
         // Setup form viewed tracking
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', function() {
@@ -450,7 +496,7 @@
         track: track,
         page: page,
         detectPageType: detectPageType,
-        version: '2.0.0'
+        version: '2.1.0'
     };
 
 })();
