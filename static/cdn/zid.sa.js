@@ -1,3 +1,5 @@
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM ready')
-})
+(function () {
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log('DOM ready')
+    })
+})()
