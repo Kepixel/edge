@@ -85,19 +85,17 @@ class AnubisIndexController extends Controller
         if (request()->headers->get('referer')) {
             $referer = request()->headers->get('referer');
 
-            if (!$referer) {
-                return null;
-            }
+            if ($referer) {
+                $host = parse_url($referer, PHP_URL_HOST);
 
-            $host = parse_url($referer, PHP_URL_HOST);
+                $parts = explode('.', $host);
 
-            $parts = explode('.', $host);
-
-            $baseDomain = implode('.', array_slice($parts, -2));
-            if ($baseDomain == 'zid.sa') {
-                $zidSAJs = file_get_contents(base_path('static/cdn/zid.sa.js'));
-                $js .= $zidSAJs;
-                $js .= PHP_EOL;
+                $baseDomain = implode('.', array_slice($parts, -2));
+                if ($baseDomain == 'zid.sa') {
+                    $zidSAJs = file_get_contents(base_path('static/cdn/zid.sa.js'));
+                    $js .= $zidSAJs;
+                    $js .= PHP_EOL;
+                }
             }
         }
 
