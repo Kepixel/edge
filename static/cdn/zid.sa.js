@@ -61,7 +61,10 @@
         }
     }
     function processDataLayerEvent(eventData) {
-        console.log(eventData?.event)
+        if (eventData?.event === 'gtm.dom') {
+            handlePageView();
+        }
+        console.log(eventData)
     }
 
     const queuedEvents = [];
