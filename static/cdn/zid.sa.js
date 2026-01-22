@@ -64,7 +64,6 @@
         if (eventData?.event === 'gtm.dom' || eventData?.event === 'gtm.historyChange-v2') {
             handlePageView();
         }
-        console.log(eventData)
     }
 
     const queuedEvents = [];
@@ -83,21 +82,21 @@
 
     function enqueueOrProcessEvent(eventData) {
 
-        // if (!isReady) {
-        //     if (eventData) {
-        //         flushQueuedEvents();
-        //     }
-        //
-        //     queuedEvents.push(eventData);
-        //     return;
-        // }
+        if (!isReady) {
+            if (eventData) {
+                flushQueuedEvents();
+            }
+
+            queuedEvents.push(eventData);
+            return;
+        }
 
         processDataLayerEvent(eventData);
     }
 
-    // setTimeout(function () {
-    //     flushQueuedEvents();
-    // }, PROCESS_DELAY_MS);
+    setTimeout(function () {
+        flushQueuedEvents();
+    }, PROCESS_DELAY_MS);
 
     window.dataLayer.forEach(function (eventData) {
         enqueueOrProcessEvent(eventData);
