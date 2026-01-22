@@ -82,6 +82,25 @@ class AnubisIndexController extends Controller
             $js .= PHP_EOL;
         }
 
+        if (request()->headers->get('referer')) {
+            $referer = request()->headers->get('referer');
+
+            if (!$referer) {
+                return null;
+            }
+
+            $host = parse_url($referer, PHP_URL_HOST);
+
+            $parts = explode('.', $host);
+
+            $baseDomain = implode('.', array_slice($parts, -2));
+            if ($baseDomain == 'zid.sa') {
+                $zidSAJs = file_get_contents(base_path('static/cdn/zid.sa.js'));
+                $js .= $zidSAJs;
+                $js .= PHP_EOL;
+            }
+        }
+
         $gtIds = [];
         $gts = $source->destinations->where('platform', 'gtm');
         foreach ($gts as $gt) {
