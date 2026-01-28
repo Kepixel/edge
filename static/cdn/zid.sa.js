@@ -254,15 +254,36 @@
         return 'other';
     }
 
+    function formatFormEventName(form, formType, action) {
+        var typeNames = {
+            'contact': 'Contact',
+            'newsletter': 'Newsletter',
+            'signup': 'Signup',
+            'lead': 'Lead'
+        };
+
+        // Use known type name if available
+        if (typeNames[formType]) {
+            return typeNames[formType] + ' Form ' + action;
+        }
+
+        // Fallback: form_id → form_name → form_type
+        var fallbackName = form.id || getFormName(form) || formType || 'Unknown';
+        return fallbackName + ' Form ' + action;
+    }
+
     function trackFormViewed(form) {
         var formId = getFormIdentifier(form);
         if (state.formsViewed[formId]) return;
         state.formsViewed[formId] = true;
 
-        track('Form Viewed', {
+        var formType = getFormType(form);
+        var eventName = formatFormEventName(form, formType, 'Viewed');
+
+        track(eventName, {
             form_id: form.id || null,
             form_name: getFormName(form),
-            form_type: getFormType(form),
+            form_type: formType,
             page_url: window.location.href
         });
     }
@@ -276,10 +297,13 @@
         if (state.formsStarted[formId]) return;
         state.formsStarted[formId] = true;
 
-        track('Form Started', {
+        var formType = getFormType(form);
+        var eventName = formatFormEventName(form, formType, 'Started');
+
+        track(eventName, {
             form_id: form.id || null,
             form_name: getFormName(form),
-            form_type: getFormType(form),
+            form_type: formType,
             page_url: window.location.href,
             first_field: input.name || input.id || null
         });
@@ -311,14 +335,16 @@
         if (!form || form.tagName !== 'FORM') return;
 
         var formId = getFormIdentifier(form);
+        var formType = getFormType(form);
+        var eventName = formatFormEventName(form, formType, 'Submitted');
 
         // Get form field values (excluding sensitive data)
         var fields = getFormFields(form);
 
-        track('Form Submitted', {
+        track(eventName, {
             form_id: form.id || null,
             form_name: getFormName(form),
-            form_type: getFormType(form),
+            form_type: formType,
             page_url: window.location.href,
             fields: fields
         });
