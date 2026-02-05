@@ -6,7 +6,7 @@ class UpdateController extends Controller
 {
     public function pluginMetadata()
     {
-        $version = '1.0.3';
+        $version = '1.0.4';
         $payload = [
             'name'          => 'Kepixel',
             'slug'          => 'kepixel',
@@ -15,7 +15,7 @@ class UpdateController extends Controller
             'requires'      => '6.0',
             'tested'        => '6.6.2',
             'requires_php'  => '7.4',
-            'last_updated'  => '2026-02-05 08:47:27',
+            'last_updated'  => '2026-02-05 20:03:47',
             'homepage'      => 'https://www.kepixel.com/',
             'sections'      => [
                 'description' => 'Bug fixes and improvements',
