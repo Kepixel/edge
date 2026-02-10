@@ -12,6 +12,7 @@ class EdgeAction extends Controller
 
     public function __invoke(Request $request, $path = '')
     {
+        return redirect('https://kepixel.com');
         if ($path) {
             $authHeader = $request->header('Authorization');
 
